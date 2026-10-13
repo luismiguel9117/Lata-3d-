@@ -391,11 +391,12 @@
     </div>
 
     <div class="control-group">
-      <div class="section-title">🎨 Textura y Material</div>
-      <label for="texture-preset">Textura</label>
+      <div class="section-title">🎨 Diseño y Texturas</div>
+      <label for="texture-preset">Diseño de Etiqueta</label>
       <select id="texture-preset">
-        <option value="ready" selected>Ready (Diseño Cerveza)</option>
-        <option value="custom">Customizable (Base)</option>
+        <option value="kalpa" selected>KALPA Café Cold Brew (Oficial)</option>
+        <option value="ready">Diseño Cerveza (Original)</option>
+        <option value="custom">Base Personalizable (Gris)</option>
       </select>
 
       <label>Metálico: <span id="val-metal">0.90</span></label>
@@ -470,7 +471,7 @@
       metalness: 0.90,
       roughness: 0.24,
       color: 0xffffff,
-      texturePreset: 'ready'
+      texturePreset: 'kalpa'
     };
 
     function init() {
@@ -548,11 +549,13 @@
     }
 
     async function preloadTextures() {
-      loaderStatus.textContent = 'Cargando texturas de la lata...';
+      loaderStatus.textContent = 'Cargando diseño KALPA y texturas...';
       const texLoader = new THREE.TextureLoader();
 
       const files = {
+        kalpaBase: 'Materials/Ready/T_BeerCan_Kalpa.png',
         readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
+        originalBase: 'Materials/Ready/T_BeerCan_BaseColor_Original.png',
         readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
         readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
         customBase: 'Materials/Customizable/T_BeerCan_BaseColor.png',
@@ -613,6 +616,9 @@
           fbx.position.y = -updatedBox.min.y;
           fbx.position.z = -center.z;
 
+          // Orient front label toward camera
+          fbx.rotation.y = -Math.PI * 0.5;
+
           fbx.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
@@ -623,7 +629,7 @@
               rawGeometry = child.geometry.clone();
               rawGeometry.computeVertexNormals();
 
-              // Precalculate circular rim geometry
+              // Precalculate circular rim geometry (with lid face protection)
               smoothRimGeometry = makeCanRimCircular(rawGeometry, 2);
 
               // Apply current mode (circular by default)
@@ -667,7 +673,7 @@
         btnToggleRim.textContent = '✨ Borde Redondeado (ACTIVADO)';
         badgeStatus.textContent = 'Borde Circular Suave';
         badgeStatus.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        modelStats.textContent = `${fileName} • Borde suavizado y circularizado`;
+        modelStats.textContent = `${fileName} • Diseño KALPA • Tapa Nítida`;
       } else {
         btnToggleRim.className = 'btn btn-toggle-off';
         btnToggleRim.textContent = '⚠️ Borde Original (Facetado / Cuadrado)';
@@ -678,10 +684,15 @@
     }
 
     function applyMaterial(mesh) {
-      const isReady = (matParams.texturePreset === 'ready');
-      const baseTex = isReady ? loadedTextures.readyBase : loadedTextures.customBase;
-      const normalTex = isReady ? loadedTextures.readyNormal : loadedTextures.customNormal;
-      const rmaoTex = isReady ? loadedTextures.readyRMAO : loadedTextures.customRMAO;
+      let baseTex = loadedTextures.kalpaBase || loadedTextures.readyBase;
+      if (matParams.texturePreset === 'ready') {
+        baseTex = loadedTextures.originalBase || loadedTextures.readyBase;
+      } else if (matParams.texturePreset === 'custom') {
+        baseTex = loadedTextures.customBase;
+      }
+
+      const normalTex = (matParams.texturePreset === 'custom') ? loadedTextures.customNormal : loadedTextures.readyNormal;
+      const rmaoTex = (matParams.texturePreset === 'custom') ? loadedTextures.customRMAO : loadedTextures.readyRMAO;
 
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(matParams.color),
