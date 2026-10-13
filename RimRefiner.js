@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
- * Modifica la geometría de la lata original existente para que únicamente el borde exterior (rim/chime)
- * pase de ser un polígono facetado de 18 lados a un círculo suave y continuo (72 lados),
- * dejando la tapa plana interior y el resto de la lata 100% intactos y sin ninguna deformación en su textura.
+ * Modifica la geometría de la lata original existente para que tanto el borde exterior (rim)
+ * como el bisel de la base inferior pasen de ser polígonos facetados de 18 lados a círculos
+ * suaves, perfectamente cilíndricos y continuos (72 lados), eliminando aristas y líneas negras,
+ * y dejando la tapa plana interior 100% intacta sin deformaciones en la textura.
  * 
  * @param {THREE.BufferGeometry} geometry - Geometría original del FBX
  * @param {number} passes - Número de pases de subdivisión (2 = 72 segmentos radiales)
- * @returns {THREE.BufferGeometry} Geometría con el borde circular suavizado
+ * @returns {THREE.BufferGeometry} Geometría con borde y base circularizados
  */
 export function makeCanRimCircular(geometry, passes = 2) {
   let currentGeo = geometry.clone();
@@ -39,16 +40,17 @@ export function makeCanRimCircular(geometry, passes = 2) {
       const minZ = Math.min(z1, z2, z3);
       const maxR = Math.max(r1, r2, r3);
 
-      // IMPORTANTE:
-      // La tapa plana interior tiene Z ~ 162.5 y R <= 25.5.
-      // Debe quedar 100% intacta para evitar cualquier deformación en la textura de la chapa/tapa.
+      // 1. Tapa plana interior (Z ~ 162.5, R <= 25.5): 100% intacta para proteger textura de la chapa
       const isLidFace = (maxZ <= 162.6 && minZ >= 162.4 && maxR <= 25.5);
 
-      // Solo circularizamos el reborde exterior metálico (Z >= 162.0 y R >= 26.5)
+      // 2. Borde exterior superior (rim/chime): Z >= 161.8 y R >= 26.2
       const isOuterRim = !isLidFace && (maxZ >= 161.8 && maxR >= 26.2);
 
-      if (isOuterRim) {
-        // Subdivisión 1 triángulo -> 4 triángulos
+      // 3. Bisel exterior de la base de aluminio: Z <= 8.2 y R >= 26.0
+      const isBaseBevel = (maxZ <= 8.2 && maxR >= 26.0);
+
+      if (isOuterRim || isBaseBevel) {
+        // Subdivisión 1 -> 4
         const m12 = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
         const m23 = new THREE.Vector3().addVectors(v2, v3).multiplyScalar(0.5);
         const m31 = new THREE.Vector3().addVectors(v3, v1).multiplyScalar(0.5);
@@ -57,12 +59,11 @@ export function makeCanRimCircular(geometry, passes = 2) {
         const u23 = new THREE.Vector2().addVectors(u2, u3).multiplyScalar(0.5);
         const u31 = new THREE.Vector2().addVectors(u3, u1).multiplyScalar(0.5);
 
-        // Proyectar únicamente los puntos medios que están en el aro exterior al radio circular exacto
+        // Proyectar vértices del aro exterior al círculo exacto
         const projectToCircle = (va, vb, vm) => {
           const ra = Math.hypot(va.x, va.y);
           const rb = Math.hypot(vb.x, vb.y);
-          // Si ambos pertenecen al aro del reborde (radio exterior mayor a 26)
-          if (ra >= 26.0 && rb >= 26.0 && Math.abs(ra - rb) < 1.5 && Math.abs(va.z - vb.z) < 1.5) {
+          if (ra >= 25.5 && rb >= 25.5 && Math.abs(ra - rb) < 1.8 && Math.abs(va.z - vb.z) < 1.5) {
             const targetR = (ra + rb) * 0.5;
             const angle = Math.atan2(vm.y, vm.x);
             vm.x = targetR * Math.cos(angle);
@@ -84,7 +85,6 @@ export function makeCanRimCircular(geometry, passes = 2) {
         pushTri(m31, m23, v3, u31, u23, u3);
         pushTri(m12, m23, m31, u12, u23, u31);
       } else {
-        // Todo lo demás (incluyendo la tapa plana interior y el cuerpo) queda intacto
         newPos.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
         newUV.push(u1.x, u1.y, u2.x, u2.y, u3.x, u3.y);
       }
