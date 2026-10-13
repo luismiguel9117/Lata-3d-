@@ -583,6 +583,48 @@
       await Promise.all(loadPromises);
     }
 
+    let bodyMesh = null;
+    let alumMesh = null;
+    let rawAlumGeometry = null;
+    let smoothAlumGeometry = null;
+
+    function splitCanGeometry(sourceGeo) {
+      const geo = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
+      const pos = geo.attributes.position;
+      const uv = geo.attributes.uv;
+
+      const bPos = [], bUV = [];
+      const aPos = [], aUV = [];
+
+      for (let i = 0; i < pos.count; i += 3) {
+        const z1 = pos.getZ(i), z2 = pos.getZ(i + 1), z3 = pos.getZ(i + 2);
+        const avgZ = (z1 + z2 + z3) / 3;
+
+        // Triángulos del cuerpo y cuello: entre 7.95 y 162.05
+        const isBody = (avgZ > 7.95 && avgZ < 162.05);
+        const targetP = isBody ? bPos : aPos;
+        const targetU = isBody ? bUV : aUV;
+
+        for (let c = 0; c < 3; c++) {
+          const idx = i + c;
+          targetP.push(pos.getX(idx), pos.getY(idx), pos.getZ(idx));
+          if (uv) targetU.push(uv.getX(idx), uv.getY(idx));
+        }
+      }
+
+      const bodyGeo = new THREE.BufferGeometry();
+      bodyGeo.setAttribute('position', new THREE.Float32BufferAttribute(bPos, 3));
+      if (uv) bodyGeo.setAttribute('uv', new THREE.Float32BufferAttribute(bUV, 2));
+      bodyGeo.computeVertexNormals();
+
+      const alumGeo = new THREE.BufferGeometry();
+      alumGeo.setAttribute('position', new THREE.Float32BufferAttribute(aPos, 3));
+      if (uv) alumGeo.setAttribute('uv', new THREE.Float32BufferAttribute(aUV, 2));
+      alumGeo.computeVertexNormals();
+
+      return { bodyGeo, alumGeo };
+    }
+
     function loadFBXModel(path) {
       loaderOverlay.classList.remove('hidden');
       loaderStatus.textContent = 'Cargando modelo existente...';
@@ -591,9 +633,10 @@
       if (currentModel) {
         scene.remove(currentModel);
         currentModel = null;
-        currentMesh = null;
-        rawGeometry = null;
-        smoothRimGeometry = null;
+        bodyMesh = null;
+        alumMesh = null;
+        rawAlumGeometry = null;
+        smoothAlumGeometry = null;
       }
 
       const fbxLoader = new FBXLoader();
@@ -619,24 +662,39 @@
           // Orient front label toward camera
           fbx.rotation.y = -Math.PI * 0.5;
 
+          // Find the original mesh
+          let originalChildMesh = null;
           fbx.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-              currentMesh = child;
-
-              // Store original unmodified geometry
-              rawGeometry = child.geometry.clone();
-              rawGeometry.computeVertexNormals();
-
-              // Precalculate circular rim geometry (with lid face protection)
-              smoothRimGeometry = makeCanRimCircular(rawGeometry, 2);
-
-              // Apply current mode (circular by default)
-              applyRimGeometry();
-              applyMaterial(child);
+            if (child.isMesh && !originalChildMesh) {
+              originalChildMesh = child;
             }
           });
+
+          if (originalChildMesh) {
+            // Split into body (printed, color-tintable) and aluminum (lid + base, strictly untinted)
+            const { bodyGeo, alumGeo } = splitCanGeometry(originalChildMesh.geometry);
+
+            rawAlumGeometry = alumGeo.clone();
+            smoothAlumGeometry = makeCanRimCircular(rawAlumGeometry, 2);
+
+            // Remove original child mesh and replace with separated submeshes
+            const parent = originalChildMesh.parent || fbx;
+            parent.remove(originalChildMesh);
+
+            bodyMesh = new THREE.Mesh(bodyGeo);
+            bodyMesh.name = "Can_BodyPrint";
+            bodyMesh.castShadow = true;
+            bodyMesh.receiveShadow = true;
+            parent.add(bodyMesh);
+
+            alumMesh = new THREE.Mesh(isRimCircular ? smoothAlumGeometry : rawAlumGeometry);
+            alumMesh.name = "Can_AluminumParts";
+            alumMesh.castShadow = true;
+            alumMesh.receiveShadow = true;
+            parent.add(alumMesh);
+
+            applyMaterials();
+          }
 
           scene.add(fbx);
           updateStatusText();
@@ -654,15 +712,15 @@
     }
 
     function applyRimGeometry() {
-      if (!currentMesh) return;
-      if (isRimCircular && smoothRimGeometry) {
-        currentMesh.geometry = smoothRimGeometry;
-      } else if (rawGeometry) {
-        currentMesh.geometry = rawGeometry;
+      if (!alumMesh) return;
+      if (isRimCircular && smoothAlumGeometry) {
+        alumMesh.geometry = smoothAlumGeometry;
+      } else if (rawAlumGeometry) {
+        alumMesh.geometry = rawAlumGeometry;
       }
-      currentMesh.geometry.attributes.position.needsUpdate = true;
-      if (currentMesh.geometry.attributes.normal) {
-        currentMesh.geometry.attributes.normal.needsUpdate = true;
+      alumMesh.geometry.attributes.position.needsUpdate = true;
+      if (alumMesh.geometry.attributes.normal) {
+        alumMesh.geometry.attributes.normal.needsUpdate = true;
       }
     }
 
@@ -673,7 +731,7 @@
         btnToggleRim.textContent = '✨ Borde Redondeado (ACTIVADO)';
         badgeStatus.textContent = 'Borde Circular Suave';
         badgeStatus.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        modelStats.textContent = `${fileName} • Diseño KALPA • Tapa Nítida`;
+        modelStats.textContent = `${fileName} • Diseño KALPA • Tapa Aluminio Pura`;
       } else {
         btnToggleRim.className = 'btn btn-toggle-off';
         btnToggleRim.textContent = '⚠️ Borde Original (Facetado / Cuadrado)';
@@ -683,7 +741,7 @@
       }
     }
 
-    function applyMaterial(mesh) {
+    function applyMaterials() {
       let baseTex = loadedTextures.kalpaBase || loadedTextures.readyBase;
       if (matParams.texturePreset === 'ready') {
         baseTex = loadedTextures.originalBase || loadedTextures.readyBase;
@@ -694,32 +752,57 @@
       const normalTex = (matParams.texturePreset === 'custom') ? loadedTextures.customNormal : loadedTextures.readyNormal;
       const rmaoTex = (matParams.texturePreset === 'custom') ? loadedTextures.customRMAO : loadedTextures.readyRMAO;
 
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(matParams.color),
-        metalness: matParams.metalness,
-        roughness: matParams.roughness,
-        map: baseTex || null,
-        normalMap: normalTex || null,
-        wireframe: wireframeMode
-      });
-
-      if (rmaoTex) {
-        mat.roughnessMap = rmaoTex;
-        mat.aoMap = rmaoTex;
-        mat.aoMapIntensity = 1.0;
+      // 1. Material del cuerpo impreso (afectado por el tinte de color)
+      if (bodyMesh) {
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(matParams.color),
+          metalness: matParams.metalness,
+          roughness: matParams.roughness,
+          map: baseTex || null,
+          normalMap: normalTex || null,
+          wireframe: wireframeMode
+        });
+        if (rmaoTex) {
+          bodyMat.roughnessMap = rmaoTex;
+          bodyMat.aoMap = rmaoTex;
+          bodyMat.aoMapIntensity = 1.0;
+        }
+        bodyMesh.material = bodyMat;
       }
 
-      mesh.material = mat;
+      // 2. Material de las secciones de aluminio (Tapa y Base) - NUNCA SE TIÑEN
+      if (alumMesh) {
+        const alumMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(0xffffff), // Aluminio inalterable
+          metalness: 0.98,
+          roughness: 0.20,
+          map: loadedTextures.readyBase || null,
+          normalMap: loadedTextures.readyNormal || null,
+          wireframe: wireframeMode
+        });
+        if (loadedTextures.readyRMAO) {
+          alumMat.roughnessMap = loadedTextures.readyRMAO;
+          alumMat.aoMap = loadedTextures.readyRMAO;
+          alumMat.aoMapIntensity = 1.0;
+        }
+        alumMesh.material = alumMat;
+      }
     }
 
     function updateMaterialParams() {
-      if (!currentMesh || !currentMesh.material) return;
-      const mat = currentMesh.material;
-      mat.color.set(matParams.color);
-      mat.metalness = matParams.metalness;
-      mat.roughness = matParams.roughness;
-      mat.wireframe = wireframeMode;
-      mat.needsUpdate = true;
+      if (bodyMesh && bodyMesh.material) {
+        bodyMesh.material.color.set(matParams.color);
+        bodyMesh.material.metalness = matParams.metalness;
+        bodyMesh.material.roughness = matParams.roughness;
+        bodyMesh.material.wireframe = wireframeMode;
+        bodyMesh.material.needsUpdate = true;
+      }
+      if (alumMesh && alumMesh.material) {
+        // Tapa y base se mantienen SIEMPRE en aluminio plateado puro
+        alumMesh.material.color.set(0xffffff);
+        alumMesh.material.wireframe = wireframeMode;
+        alumMesh.material.needsUpdate = true;
+      }
     }
 
     function setCameraView(view) {
@@ -768,8 +851,17 @@
       // Texture Preset
       document.getElementById('texture-preset').addEventListener('change', (e) => {
         matParams.texturePreset = e.target.value;
-        if (currentMesh) applyMaterial(currentMesh);
+        applyMaterials();
       });
+
+      // Selector de color / tinte de la lata (Afecta únicamente al cuerpo/cuello; obvia tapa y base)
+      const colorInput = document.getElementById('can-color');
+      if (colorInput) {
+        colorInput.addEventListener('input', (e) => {
+          matParams.color = e.target.value;
+          updateMaterialParams();
+        });
+      }
 
       // Metalness
       const metalInput = document.getElementById('param-metal');
