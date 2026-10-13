@@ -3,19 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visor 3D - Lata Original con Borde Circular</title>
+  <title>Visor 3D • KALPA Café Cold Brew (Estudio Publicitario)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #0a0d12;
-      --panel-bg: rgba(16, 20, 29, 0.86);
-      --panel-border: rgba(255, 255, 255, 0.09);
-      --accent: #f59e0b;
-      --accent-glow: rgba(245, 158, 11, 0.35);
-      --success: #10b981;
-      --text-main: #f1f5f9;
+      --bg-studio: #e3e6ea;
+      --panel-bg: rgba(255, 255, 255, 0.85);
+      --panel-border: rgba(0, 0, 0, 0.08);
+      --panel-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+      --accent: #111827;
+      --accent-gold: #d97706;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    body.dark-mode {
+      --bg-studio: #0d1117;
+      --panel-bg: rgba(18, 24, 38, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.1);
+      --panel-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+      --text-main: #f8fafc;
       --text-muted: #94a3b8;
     }
 
@@ -27,12 +36,13 @@
     }
 
     body {
-      background-color: var(--bg-dark);
+      background-color: var(--bg-studio);
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--text-main);
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      transition: background-color 0.3s ease;
     }
 
     #canvas-container {
@@ -47,8 +57,8 @@
     /* Top Bar Header */
     .top-bar {
       position: absolute;
-      top: 20px;
-      left: 24px;
+      top: 22px;
+      left: 26px;
       z-index: 10;
       display: flex;
       align-items: center;
@@ -56,61 +66,68 @@
       pointer-events: none;
     }
 
-    .badge {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: #fff;
+    .brand-pill {
+      background: #0f172a;
+      color: #ffffff;
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 5px 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 6px 14px;
       border-radius: 999px;
       text-transform: uppercase;
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-pill span {
+      color: #f59e0b;
     }
 
     .title-group h1 {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 19px;
+      font-weight: 800;
       letter-spacing: -0.02em;
-      color: #ffffff;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      color: var(--text-main);
     }
 
     .title-group p {
       font-size: 12px;
+      font-weight: 500;
       color: var(--text-muted);
     }
 
     /* Floating UI Controls Panel */
     .control-panel {
       position: absolute;
-      top: 20px;
-      right: 24px;
+      top: 22px;
+      right: 26px;
       width: 330px;
-      max-height: calc(100vh - 40px);
+      max-height: calc(100vh - 44px);
       background: var(--panel-bg);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 18px;
+      padding: 22px;
       z-index: 10;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--panel-shadow);
       display: flex;
       flex-direction: column;
       gap: 15px;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: rgba(255,255,255,0.2) transparent;
+      transition: all 0.3s ease;
     }
 
     .section-title {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--accent);
-      margin-bottom: 7px;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -119,59 +136,73 @@
     .control-group {
       display: flex;
       flex-direction: column;
-      gap: 7px;
-    }
-
-    /* Highlight box for rim smoothing toggle */
-    .highlight-card {
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 10px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .highlight-card .card-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: #34d399;
-      display: flex;
-      align-items: center;
       gap: 6px;
     }
 
     label {
       font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
+      font-weight: 600;
+      color: var(--text-main);
       display: flex;
       justify-content: space-between;
     }
 
     select, input[type="color"] {
       width: 100%;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
+      background: rgba(125, 140, 160, 0.1);
+      border: 1px solid rgba(125, 140, 160, 0.2);
+      border-radius: 9px;
       padding: 9px 12px;
-      color: #fff;
+      color: var(--text-main);
       font-size: 13px;
       font-family: inherit;
+      font-weight: 600;
       outline: none;
       transition: all 0.2s ease;
       cursor: pointer;
     }
 
     select:focus, select:hover {
-      border-color: var(--accent);
-      background: rgba(255, 255, 255, 0.08);
+      border-color: #0f172a;
+      background: rgba(125, 140, 160, 0.15);
     }
 
-    select option {
-      background: #181c25;
-      color: #fff;
+    /* Grid for reference camera angles (0, 45, 90, 180, Top, Bottom) */
+    .angles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .btn-angle {
+      background: rgba(125, 140, 160, 0.1);
+      border: 1px solid rgba(125, 140, 160, 0.2);
+      border-radius: 8px;
+      padding: 7px 4px;
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .btn-angle:hover {
+      background: rgba(15, 23, 42, 0.08);
+      border-color: rgba(15, 23, 42, 0.3);
+    }
+
+    .btn-angle.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .btn-angle.active {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #f8fafc;
     }
 
     /* Range sliders */
@@ -179,7 +210,7 @@
       width: 100%;
       height: 5px;
       border-radius: 3px;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(125, 140, 160, 0.25);
       outline: none;
       appearance: none;
       -webkit-appearance: none;
@@ -192,12 +223,15 @@
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent-glow);
+      background: #0f172a;
+      box-shadow: 0 0 6px rgba(0,0,0,0.3);
       cursor: pointer;
     }
 
-    /* Buttons */
+    body.dark-mode input[type="range"]::-webkit-slider-thumb {
+      background: #f8fafc;
+    }
+
     .btn-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -205,13 +239,13 @@
     }
 
     .btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      background: rgba(125, 140, 160, 0.1);
+      border: 1px solid rgba(125, 140, 160, 0.2);
+      border-radius: 9px;
       padding: 9px 12px;
-      color: #fff;
+      color: var(--text-main);
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -221,69 +255,55 @@
     }
 
     .btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(125, 140, 160, 0.18);
     }
 
     .btn.active {
-      background: var(--accent);
-      color: #000;
-      border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-
-    .btn-toggle-success {
-      background: #10b981;
-      color: #000;
-      font-weight: 700;
-      border: 1px solid #34d399;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
-    }
-
-    .btn-toggle-success:hover {
-      background: #059669;
+      background: #0f172a;
       color: #fff;
+      border-color: #0f172a;
     }
 
-    .btn-toggle-off {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-muted);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+    body.dark-mode .btn.active {
+      background: #f8fafc;
+      color: #0f172a;
     }
 
-    /* Bottom helper pill */
+    /* Bottom helper hint */
     .bottom-hint {
       position: absolute;
-      bottom: 20px;
+      bottom: 22px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
-      background: rgba(18, 22, 31, 0.78);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 999px;
-      padding: 8px 20px;
+      padding: 8px 22px;
       font-size: 12px;
+      font-weight: 600;
       color: var(--text-muted);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
       pointer-events: none;
       display: flex;
       align-items: center;
       gap: 14px;
+      box-shadow: var(--panel-shadow);
     }
 
     .bottom-hint kbd {
-      background: rgba(255, 255, 255, 0.12);
-      padding: 2px 6px;
+      background: rgba(125, 140, 160, 0.18);
+      padding: 2px 7px;
       border-radius: 4px;
       font-size: 10px;
-      color: #fff;
+      color: var(--text-main);
     }
 
     /* Loading overlay */
     #loader-overlay {
       position: absolute;
       inset: 0;
-      background: #090c10;
+      background: var(--bg-studio);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -298,13 +318,13 @@
     }
 
     .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid rgba(245, 158, 11, 0.2);
-      border-top-color: var(--accent);
+      width: 46px;
+      height: 46px;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #0f172a;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     @keyframes spin {
@@ -313,15 +333,9 @@
 
     .loader-text {
       font-size: 14px;
-      font-weight: 600;
-      color: #fff;
+      font-weight: 700;
+      color: var(--text-main);
       letter-spacing: 0.5px;
-    }
-
-    .loader-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
     }
   </style>
 
@@ -341,16 +355,15 @@
   <!-- Loading Screen -->
   <div id="loader-overlay">
     <div class="spinner"></div>
-    <div class="loader-text" id="loader-status">Cargando Lata 3D...</div>
-    <div class="loader-sub" id="loader-progress">Por favor espera un momento</div>
+    <div class="loader-text" id="loader-status">Cargando Render de Estudio KALPA...</div>
   </div>
 
   <!-- Top Bar -->
   <div class="top-bar">
-    <span class="badge" id="badge-status">Borde Circular Suave</span>
+    <div class="brand-pill">⚡ KALPA <span>355 mL</span></div>
     <div class="title-group">
-      <h1>Lata 3D Original • Borde Corregido</h1>
-      <p id="model-stats">SM_BeerCan_A.fbx • Borde circularizado</p>
+      <h1>Café Cold Brew • Edición Original</h1>
+      <p id="model-stats">Estudio Fotográfico Comercial 3D</p>
     </div>
   </div>
 
@@ -359,79 +372,66 @@
 
   <!-- Floating Controls -->
   <div class="control-panel">
-    <!-- Main feature highlight: RIM CORRECTION TOGGLE -->
-    <div class="highlight-card">
-      <div class="card-title">⭕ Corrección del Borde Superior</div>
-      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
-        Convierte el borde poligonal/facetado de la lata en una circunferencia continua y suave.
-      </p>
-      <button class="btn btn-toggle-success" id="btn-toggle-rim" style="width: 100%; font-size: 12px;">
-        ✨ Borde Redondeado (ACTIVADO)
+    <!-- Camera angles exactly as in the user's reference image -->
+    <div class="control-group">
+      <div class="section-title">📐 Ángulos de la Referencia</div>
+      <div class="angles-grid">
+        <button class="btn-angle active" data-angle="0">0° Frente</button>
+        <button class="btn-angle" data-angle="45">45° Ángulo</button>
+        <button class="btn-angle" data-angle="90">90° Lateral</button>
+        <button class="btn-angle" data-angle="180">180° Nutri</button>
+        <button class="btn-angle" data-angle="top">🔝 Tapa</button>
+        <button class="btn-angle" data-angle="bottom">⬇️ Base</button>
+      </div>
+    </div>
+
+    <!-- Rim circular smoothing toggle -->
+    <div class="control-group">
+      <div class="section-title">⭕ Borde Superior</div>
+      <button class="btn active" id="btn-toggle-rim" style="width: 100%;">
+        ✨ Borde Redondeado Suave
       </button>
     </div>
 
+    <!-- Lighting & Studio Environment -->
     <div class="control-group">
-      <div class="section-title">📦 Modelo Original (FBX)</div>
-      <label for="model-select">Archivo de la Carpeta</label>
-      <select id="model-select">
-        <option value="Models/SM_BeerCan_A.fbx" selected>SM_BeerCan_A.fbx (Estándar)</option>
-        <option value="Models/SM_BeerCan_B.fbx">SM_BeerCan_B.fbx (Abollada 1)</option>
-        <option value="Models/SM_BeerCan_C.fbx">SM_BeerCan_C.fbx (Abollada 2)</option>
-        <option value="Models/SM_BeerCan_D.fbx">SM_BeerCan_D.fbx (Aplastada)</option>
-        <option value="Models/SM_Beer.fbx">SM_Beer.fbx (Base)</option>
-      </select>
-    </div>
-
-    <div class="control-group">
-      <div class="section-title">📷 Ángulo de Cámara</div>
-      <div class="btn-grid">
-        <button class="btn active" id="btn-cam-rim">🔍 Zoom al Borde</button>
-        <button class="btn" id="btn-cam-front">🎯 Lata Completa</button>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <div class="section-title">🎨 Diseño y Texturas</div>
-      <label for="texture-preset">Diseño de Etiqueta</label>
-      <select id="texture-preset">
-        <option value="kalpa" selected>KALPA Café Cold Brew (Oficial)</option>
-        <option value="ready">Diseño Cerveza (Original)</option>
-        <option value="custom">Base Personalizable (Gris)</option>
-      </select>
-
-      <label>Metálico: <span id="val-metal">0.90</span></label>
-      <input type="range" id="param-metal" min="0" max="1" step="0.02" value="0.90">
-
-      <label>Rugosidad: <span id="val-rough">0.24</span></label>
-      <input type="range" id="param-rough" min="0" max="1" step="0.02" value="0.24">
-    </div>
-
-    <div class="control-group">
-      <div class="section-title">💡 Iluminación</div>
-      <label>Brillo de Luz: <span id="val-light">1.3</span></label>
-      <input type="range" id="param-light" min="0.2" max="3.0" step="0.1" value="1.3">
-
-      <label for="bg-color">Fondo</label>
+      <div class="section-title">💡 Iluminación de Estudio</div>
+      <label for="bg-color">Entorno de Fondo</label>
       <select id="bg-color">
-        <option value="#0a0d12" selected>Estudio Oscuro</option>
-        <option value="#1a202c">Gris Metal</option>
-        <option value="#000000">Negro</option>
+        <option value="#e3e6ea" selected>Gris Estudio (Referencia)</option>
+        <option value="#ffffff">Blanco Infinito</option>
+        <option value="#0d1117">Estudio Oscuro (Dark)</option>
+        <option value="#1e2430">Gris Acero</option>
       </select>
+
+      <label>Brillo de Luces: <span id="val-light">1.2</span></label>
+      <input type="range" id="param-light" min="0.5" max="2.5" step="0.1" value="1.2">
     </div>
 
+    <!-- Material Properties -->
+    <div class="control-group">
+      <div class="section-title">🎨 Acabado de la Lata</div>
+      <label>Lustre Satinado (Roughness): <span id="val-rough">0.36</span></label>
+      <input type="range" id="param-rough" min="0.1" max="0.8" step="0.02" value="0.36">
+
+      <label>Tinte del Cuerpo (Obvia aluminio)</label>
+      <input type="color" id="can-color" value="#ffffff">
+    </div>
+
+    <!-- Tools -->
     <div class="control-group">
       <div class="section-title">⚙️ Herramientas</div>
       <div class="btn-grid">
-        <button class="btn active" id="btn-autorotate">🔄 Giro</button>
+        <button class="btn" id="btn-autorotate">🔄 Auto-Giro</button>
         <button class="btn" id="btn-wireframe">🕸️ Malla</button>
       </div>
-      <button class="btn" id="btn-screenshot" style="width: 100%;">📸 Descargar Captura</button>
+      <button class="btn" id="btn-screenshot" style="width: 100%;">📸 Descargar Render HD</button>
     </div>
   </div>
 
   <!-- Bottom Hint -->
   <div class="bottom-hint">
-    <span><kbd>Click Izq</kbd> Rotar</span>
+    <span><kbd>Click Izq</kbd> Rotar 360°</span>
     <span>•</span>
     <span><kbd>Click Der</kbd> Desplazar</span>
     <span>•</span>
@@ -447,97 +447,94 @@
     // UI elements
     const container = document.getElementById('canvas-container');
     const loaderOverlay = document.getElementById('loader-overlay');
-    const loaderStatus = document.getElementById('loader-status');
-    const loaderProgress = document.getElementById('loader-progress');
     const modelStats = document.getElementById('model-stats');
-    const badgeStatus = document.getElementById('badge-status');
     const btnToggleRim = document.getElementById('btn-toggle-rim');
+    const angleButtons = document.querySelectorAll('.btn-angle');
 
     let scene, camera, renderer, controls;
     let currentModel = null;
-    let currentMesh = null;
-    let rawGeometry = null;
-    let smoothRimGeometry = null;
+    let bodyMesh = null;
+    let alumMesh = null;
+    let rawAlumGeometry = null;
+    let smoothAlumGeometry = null;
     let loadedTextures = {};
-    let isRimCircular = true; // Enabled by default
-    let autoRotate = true;
+    let isRimCircular = true;
+    let autoRotate = false;
     let wireframeMode = false;
-    let currentModelPath = 'Models/SM_BeerCan_A.fbx';
+    let targetCanRotationY = 0;
 
     // Lights
-    let keyLight, fillLight, rimLight, topRimLight, hemiLight;
+    let softboxLeft, softboxRight, rimLight, topRimLight, hemiLight;
 
     const matParams = {
-      metalness: 0.90,
-      roughness: 0.24,
-      color: 0xffffff,
-      texturePreset: 'kalpa'
+      metalness: 0.18,
+      roughness: 0.36,
+      clearcoat: 0.12,
+      color: 0xffffff
     };
 
     function init() {
       // 1. Scene
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0a0d12);
+      scene.background = new THREE.Color(0xe3e6ea);
 
-      // 2. Camera focused on the rim by default (as requested)
-      camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-      setCameraView('rim');
+      // 2. Camera: clean orthographic-like perspective matching product studio shots
+      camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 1000);
+      setCameraAngle('0');
 
-      // 3. Renderer
+      // 3. Renderer with high color fidelity
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = 1.12;
       container.appendChild(renderer.domElement);
 
       // 4. Orbit Controls
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
-      controls.minDistance = 0.4;
-      controls.maxDistance = 10;
-      controls.maxPolarAngle = Math.PI / 2 + 0.12;
+      controls.minDistance = 1.5;
+      controls.maxDistance = 8.0;
+      controls.maxPolarAngle = Math.PI / 2 + 0.15;
 
-      // 5. Studio Lighting
-      hemiLight = new THREE.HemisphereLight(0xffffff, 0x1a202c, 0.65);
+      // 5. Commercial Studio Product Lighting (Twin vertical strip-box highlights)
+      hemiLight = new THREE.HemisphereLight(0xffffff, 0xb8bcc2, 0.95);
       hemiLight.position.set(0, 20, 0);
       scene.add(hemiLight);
 
-      keyLight = new THREE.DirectionalLight(0xfff5ea, 1.9);
-      keyLight.position.set(3.5, 4.5, 3.5);
-      keyLight.castShadow = true;
-      keyLight.shadow.mapSize.width = 2048;
-      keyLight.shadow.mapSize.height = 2048;
-      scene.add(keyLight);
+      // Main Left Strip Softbox (produces the bright vertical strip highlight on the left)
+      softboxLeft = new THREE.DirectionalLight(0xffffff, 1.8);
+      softboxLeft.position.set(-3.2, 2.5, 3.2);
+      softboxLeft.castShadow = true;
+      softboxLeft.shadow.mapSize.width = 2048;
+      softboxLeft.shadow.mapSize.height = 2048;
+      softboxLeft.shadow.bias = -0.0001;
+      scene.add(softboxLeft);
 
-      fillLight = new THREE.DirectionalLight(0xb0cbff, 1.0);
-      fillLight.position.set(-3.5, 2.5, -2.5);
-      scene.add(fillLight);
+      // Fill Right Strip Softbox (produces the subtle right highlight)
+      softboxRight = new THREE.DirectionalLight(0xf2f5fa, 1.2);
+      softboxRight.position.set(3.2, 2.0, 2.8);
+      scene.add(softboxRight);
 
-      rimLight = new THREE.DirectionalLight(0xffc27d, 1.4);
-      rimLight.position.set(0, 3.5, -4.5);
+      // Back Rim Light (separates dark can from background)
+      rimLight = new THREE.DirectionalLight(0xffffff, 1.3);
+      rimLight.position.set(0, 3.5, -4.0);
       scene.add(rimLight);
 
-      // Dedicated rim highlight light
-      topRimLight = new THREE.DirectionalLight(0xffffff, 1.3);
-      topRimLight.position.set(0.2, 5.0, 1.0);
+      // Top Down Light (illuminates aluminum lid and pull-tab)
+      topRimLight = new THREE.DirectionalLight(0xffffff, 1.4);
+      topRimLight.position.set(0.2, 5.0, 0.8);
       scene.add(topRimLight);
 
-      // 6. Ground Shadow
-      const groundGeo = new THREE.PlaneGeometry(25, 25);
-      const groundMat = new THREE.ShadowMaterial({ opacity: 0.35 });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2;
-      ground.position.y = 0;
-      ground.receiveShadow = true;
-      scene.add(ground);
+      // 6. Studio Floor Contact Shadow
+      createStudioContactShadow();
 
       // 7. Load Textures & FBX
       preloadTextures().then(() => {
-        loadFBXModel(currentModelPath);
+        loadFBXModel('Models/SM_BeerCan_A.fbx');
       });
 
       // 8. Event Listeners
@@ -548,19 +545,41 @@
       animate();
     }
 
-    async function preloadTextures() {
-      loaderStatus.textContent = 'Cargando diseño KALPA y texturas...';
-      const texLoader = new THREE.TextureLoader();
+    function createStudioContactShadow() {
+      // High resolution smooth circular contact shadow
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(256, 256, 60, 256, 256, 250);
+      grad.addColorStop(0, 'rgba(0, 0, 0, 0.38)');
+      grad.addColorStop(0.35, 'rgba(0, 0, 0, 0.22)');
+      grad.addColorStop(0.70, 'rgba(0, 0, 0, 0.06)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
 
+      const shadowTex = new THREE.CanvasTexture(canvas);
+      const shadowPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.6, 2.6),
+        new THREE.MeshBasicMaterial({
+          map: shadowTex,
+          transparent: true,
+          depthWrite: false
+        })
+      );
+      shadowPlane.rotation.x = -Math.PI / 2;
+      shadowPlane.position.y = 0.002;
+      scene.add(shadowPlane);
+    }
+
+    async function preloadTextures() {
+      const texLoader = new THREE.TextureLoader();
       const files = {
         kalpaBase: 'Materials/Ready/T_BeerCan_Kalpa.png',
         readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
-        originalBase: 'Materials/Ready/T_BeerCan_BaseColor_Original.png',
         readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
-        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
-        customBase: 'Materials/Customizable/T_BeerCan_BaseColor.png',
-        customNormal: 'Materials/Customizable/T_BeerCan_Normal.png',
-        customRMAO: 'Materials/Customizable/T_BeerCan_RMAO.png'
+        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png'
       };
 
       const loadPromises = Object.entries(files).map(([key, url]) => {
@@ -583,11 +602,6 @@
       await Promise.all(loadPromises);
     }
 
-    let bodyMesh = null;
-    let alumMesh = null;
-    let rawAlumGeometry = null;
-    let smoothAlumGeometry = null;
-
     function splitCanGeometry(sourceGeo) {
       const geo = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
       const pos = geo.attributes.position;
@@ -600,7 +614,7 @@
         const z1 = pos.getZ(i), z2 = pos.getZ(i + 1), z3 = pos.getZ(i + 2);
         const avgZ = (z1 + z2 + z3) / 3;
 
-        // Triángulos del cuerpo y cuello: entre 7.95 y 162.05
+        // Triangles of body and neck (printed with Kalpa label): between 7.95 and 162.05
         const isBody = (avgZ > 7.95 && avgZ < 162.05);
         const targetP = isBody ? bPos : aPos;
         const targetU = isBody ? bUV : aUV;
@@ -627,8 +641,6 @@
 
     function loadFBXModel(path) {
       loaderOverlay.classList.remove('hidden');
-      loaderStatus.textContent = 'Cargando modelo existente...';
-      loaderProgress.textContent = path.split('/').pop();
 
       if (currentModel) {
         scene.remove(currentModel);
@@ -645,7 +657,7 @@
         (fbx) => {
           currentModel = fbx;
 
-          // Standardize can scale and place on ground
+          // Standardize can scale
           const box = new THREE.Box3().setFromObject(fbx);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
@@ -659,10 +671,10 @@
           fbx.position.y = -updatedBox.min.y;
           fbx.position.z = -center.z;
 
-          // Orient front label toward camera
-          fbx.rotation.y = -Math.PI * 0.5;
+          // Rotation 0 aligns KALPA front logo directly to the camera
+          fbx.rotation.y = 0;
+          targetCanRotationY = 0;
 
-          // Find the original mesh
           let originalChildMesh = null;
           fbx.traverse((child) => {
             if (child.isMesh && !originalChildMesh) {
@@ -671,13 +683,10 @@
           });
 
           if (originalChildMesh) {
-            // Split into body (printed, color-tintable) and aluminum (lid + base, strictly untinted)
             const { bodyGeo, alumGeo } = splitCanGeometry(originalChildMesh.geometry);
-
             rawAlumGeometry = alumGeo.clone();
             smoothAlumGeometry = makeCanRimCircular(rawAlumGeometry, 2);
 
-            // Remove original child mesh and replace with separated submeshes
             const parent = originalChildMesh.parent || fbx;
             parent.remove(originalChildMesh);
 
@@ -697,182 +706,155 @@
           }
 
           scene.add(fbx);
-          updateStatusText();
 
           setTimeout(() => {
             loaderOverlay.classList.add('hidden');
           }, 150);
         },
         undefined,
-        (err) => {
-          console.error(err);
-          loaderStatus.textContent = 'Error al cargar FBX';
-        }
+        (err) => console.error(err)
       );
     }
 
-    function applyRimGeometry() {
-      if (!alumMesh) return;
-      if (isRimCircular && smoothAlumGeometry) {
-        alumMesh.geometry = smoothAlumGeometry;
-      } else if (rawAlumGeometry) {
-        alumMesh.geometry = rawAlumGeometry;
-      }
-      alumMesh.geometry.attributes.position.needsUpdate = true;
-      if (alumMesh.geometry.attributes.normal) {
-        alumMesh.geometry.attributes.normal.needsUpdate = true;
-      }
-    }
-
-    function updateStatusText() {
-      const fileName = currentModelPath.split('/').pop();
-      if (isRimCircular) {
-        btnToggleRim.className = 'btn btn-toggle-success';
-        btnToggleRim.textContent = '✨ Borde Redondeado (ACTIVADO)';
-        badgeStatus.textContent = 'Borde Circular Suave';
-        badgeStatus.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        modelStats.textContent = `${fileName} • Diseño KALPA • Tapa Aluminio Pura`;
-      } else {
-        btnToggleRim.className = 'btn btn-toggle-off';
-        btnToggleRim.textContent = '⚠️ Borde Original (Facetado / Cuadrado)';
-        badgeStatus.textContent = 'Borde Original';
-        badgeStatus.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
-        modelStats.textContent = `${fileName} • Geometría original (18 segmentos)`;
-      }
-    }
-
     function applyMaterials() {
-      let baseTex = loadedTextures.kalpaBase || loadedTextures.readyBase;
-      if (matParams.texturePreset === 'ready') {
-        baseTex = loadedTextures.originalBase || loadedTextures.readyBase;
-      } else if (matParams.texturePreset === 'custom') {
-        baseTex = loadedTextures.customBase;
-      }
+      const baseTex = loadedTextures.kalpaBase || loadedTextures.readyBase;
+      const normalTex = loadedTextures.readyNormal;
+      const rmaoTex = loadedTextures.readyRMAO;
 
-      const normalTex = (matParams.texturePreset === 'custom') ? loadedTextures.customNormal : loadedTextures.readyNormal;
-      const rmaoTex = (matParams.texturePreset === 'custom') ? loadedTextures.customRMAO : loadedTextures.readyRMAO;
-
-      // 1. Material del cuerpo impreso (afectado por el tinte de color)
+      // 1. Printed Can Body (Premium Semi-Matte Silk Finish)
       if (bodyMesh) {
-        const bodyMat = new THREE.MeshStandardMaterial({
+        bodyMesh.material = new THREE.MeshPhysicalMaterial({
           color: new THREE.Color(matParams.color),
           metalness: matParams.metalness,
           roughness: matParams.roughness,
+          clearcoat: matParams.clearcoat,
+          clearcoatRoughness: 0.25,
           map: baseTex || null,
+          normalMap: normalTex || null,
+          normalScale: new THREE.Vector2(0.8, 0.8),
+          wireframe: wireframeMode
+        });
+      }
+
+      // 2. Pure Aluminum Sections (Top Lid & Base Chime - Never Tinted)
+      if (alumMesh) {
+        alumMesh.material = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(0xffffff),
+          metalness: 0.96,
+          roughness: 0.20,
+          map: loadedTextures.readyBase || null,
           normalMap: normalTex || null,
           wireframe: wireframeMode
         });
-        if (rmaoTex) {
-          bodyMat.roughnessMap = rmaoTex;
-          bodyMat.aoMap = rmaoTex;
-          bodyMat.aoMapIntensity = 1.0;
-        }
-        bodyMesh.material = bodyMat;
-      }
-
-      // 2. Material de las secciones de aluminio (Tapa y Base) - NUNCA SE TIÑEN
-      if (alumMesh) {
-        const alumMat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(0xffffff), // Aluminio inalterable
-          metalness: 0.98,
-          roughness: 0.20,
-          map: loadedTextures.readyBase || null,
-          normalMap: loadedTextures.readyNormal || null,
-          wireframe: wireframeMode
-        });
-        if (loadedTextures.readyRMAO) {
-          alumMat.roughnessMap = loadedTextures.readyRMAO;
-          alumMat.aoMap = loadedTextures.readyRMAO;
-          alumMat.aoMapIntensity = 1.0;
-        }
-        alumMesh.material = alumMat;
       }
     }
 
     function updateMaterialParams() {
       if (bodyMesh && bodyMesh.material) {
         bodyMesh.material.color.set(matParams.color);
-        bodyMesh.material.metalness = matParams.metalness;
         bodyMesh.material.roughness = matParams.roughness;
         bodyMesh.material.wireframe = wireframeMode;
         bodyMesh.material.needsUpdate = true;
       }
       if (alumMesh && alumMesh.material) {
-        // Tapa y base se mantienen SIEMPRE en aluminio plateado puro
         alumMesh.material.color.set(0xffffff);
         alumMesh.material.wireframe = wireframeMode;
         alumMesh.material.needsUpdate = true;
       }
     }
 
-    function setCameraView(view) {
-      if (view === 'rim') {
-        // Close-up angle focusing precisely on the top rim as in the user's reference
-        camera.position.set(0.65, 2.35, 1.25);
-        if (controls) {
-          controls.target.set(0, 1.90, 0);
-          controls.update();
-        }
-      } else if (view === 'front') {
-        camera.position.set(0, 1.1, 3.4);
-        if (controls) {
-          controls.target.set(0, 1.0, 0);
-          controls.update();
-        }
+    // Set exact reference camera angle
+    function setCameraAngle(angle) {
+      if (!controls) return;
+      autoRotate = false;
+      document.getElementById('btn-autorotate').classList.remove('active');
+
+      if (angle === '0') {
+        // Front view (KALPA logo, Original, 0 Calories)
+        targetCanRotationY = 0;
+        camera.position.set(0, 1.05, 3.8);
+        controls.target.set(0, 1.0, 0);
+      } else if (angle === '45') {
+        // 45 degree three-quarter angle
+        targetCanRotationY = Math.PI * 0.25;
+        camera.position.set(0, 1.05, 3.8);
+        controls.target.set(0, 1.0, 0);
+      } else if (angle === '90') {
+        // Right side view (pure dark Andean pattern)
+        targetCanRotationY = Math.PI * 0.5;
+        camera.position.set(0, 1.05, 3.8);
+        controls.target.set(0, 1.0, 0);
+      } else if (angle === '180') {
+        // Back view (Nutrition facts table and barcode)
+        targetCanRotationY = Math.PI;
+        camera.position.set(0, 1.05, 3.8);
+        controls.target.set(0, 1.0, 0);
+      } else if (angle === 'top') {
+        // Top view looking directly down onto the aluminum lid & tab
+        targetCanRotationY = 0;
+        camera.position.set(0, 3.6, 0.01);
+        controls.target.set(0, 1.9, 0);
+      } else if (angle === 'bottom') {
+        // Bottom view looking onto concave aluminum base
+        targetCanRotationY = 0;
+        camera.position.set(0, -1.6, 0.01);
+        controls.target.set(0, 0.1, 0);
       }
+
+      if (currentModel) {
+        currentModel.rotation.y = targetCanRotationY;
+      }
+      controls.update();
     }
 
     function setupUIEventListeners() {
-      // Toggle rim circular modification
+      // Reference Angles buttons
+      angleButtons.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          angleButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          setCameraAngle(btn.getAttribute('data-angle'));
+        });
+      });
+
+      // Rim smoothing toggle
       btnToggleRim.addEventListener('click', () => {
         isRimCircular = !isRimCircular;
-        applyRimGeometry();
-        updateStatusText();
+        btnToggleRim.classList.toggle('active', isRimCircular);
+        btnToggleRim.textContent = isRimCircular ? '✨ Borde Redondeado Suave' : '⚠️ Borde Original Facetado';
+        if (alumMesh) {
+          alumMesh.geometry = isRimCircular ? smoothAlumGeometry : rawAlumGeometry;
+          alumMesh.geometry.attributes.position.needsUpdate = true;
+          if (alumMesh.geometry.attributes.normal) alumMesh.geometry.attributes.normal.needsUpdate = true;
+        }
       });
 
-      // Model select
-      document.getElementById('model-select').addEventListener('change', (e) => {
-        currentModelPath = e.target.value;
-        loadFBXModel(currentModelPath);
+      // Background color selector
+      const bgSelect = document.getElementById('bg-color');
+      bgSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        scene.background = new THREE.Color(val);
+        if (val === '#0d1117' || val === '#1e2430') {
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+        }
       });
 
-      // Camera views
-      document.getElementById('btn-cam-rim').addEventListener('click', () => {
-        setCameraView('rim');
-        document.getElementById('btn-cam-rim').classList.add('active');
-        document.getElementById('btn-cam-front').classList.remove('active');
-      });
-      document.getElementById('btn-cam-front').addEventListener('click', () => {
-        setCameraView('front');
-        document.getElementById('btn-cam-front').classList.add('active');
-        document.getElementById('btn-cam-rim').classList.remove('active');
-      });
-
-      // Texture Preset
-      document.getElementById('texture-preset').addEventListener('change', (e) => {
-        matParams.texturePreset = e.target.value;
-        applyMaterials();
+      // Light Intensity slider
+      const lightInput = document.getElementById('param-light');
+      const lightVal = document.getElementById('val-light');
+      lightInput.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        lightVal.textContent = val.toFixed(1);
+        softboxLeft.intensity = 1.8 * val;
+        softboxRight.intensity = 1.2 * val;
+        rimLight.intensity = 1.3 * val;
+        topRimLight.intensity = 1.4 * val;
+        hemiLight.intensity = 0.95 * val;
       });
 
-      // Selector de color / tinte de la lata (Afecta únicamente al cuerpo/cuello; obvia tapa y base)
-      const colorInput = document.getElementById('can-color');
-      if (colorInput) {
-        colorInput.addEventListener('input', (e) => {
-          matParams.color = e.target.value;
-          updateMaterialParams();
-        });
-      }
-
-      // Metalness
-      const metalInput = document.getElementById('param-metal');
-      const metalVal = document.getElementById('val-metal');
-      metalInput.addEventListener('input', (e) => {
-        matParams.metalness = parseFloat(e.target.value);
-        metalVal.textContent = matParams.metalness.toFixed(2);
-        updateMaterialParams();
-      });
-
-      // Roughness
+      // Roughness slider (adjust silk / matte look of the can)
       const roughInput = document.getElementById('param-rough');
       const roughVal = document.getElementById('val-rough');
       roughInput.addEventListener('input', (e) => {
@@ -881,21 +863,11 @@
         updateMaterialParams();
       });
 
-      // Light Intensity
-      const lightInput = document.getElementById('param-light');
-      const lightVal = document.getElementById('val-light');
-      lightInput.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value);
-        lightVal.textContent = val.toFixed(1);
-        keyLight.intensity = 1.9 * val;
-        fillLight.intensity = 1.0 * val;
-        rimLight.intensity = 1.4 * val;
-        topRimLight.intensity = 1.3 * val;
-      });
-
-      // Background color
-      document.getElementById('bg-color').addEventListener('change', (e) => {
-        scene.background = new THREE.Color(e.target.value);
+      // Color picker (affects only printed can body)
+      const colorInput = document.getElementById('can-color');
+      colorInput.addEventListener('input', (e) => {
+        matParams.color = e.target.value;
+        updateMaterialParams();
       });
 
       // Auto rotate
@@ -918,7 +890,7 @@
         renderer.render(scene, camera);
         const dataURL = renderer.domElement.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `beer-can-rim-${Date.now()}.png`;
+        link.download = `kalpa-coldbrew-render-${Date.now()}.png`;
         link.href = dataURL;
         link.click();
       });
