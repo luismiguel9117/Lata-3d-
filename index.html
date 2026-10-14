@@ -442,7 +442,7 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-    import { makeCanRimCircular } from './RimRefiner.js';
+    import { smoothCanBody, buildRealisticCanRimAndBase } from './CanRefinerPro.js';
 
     // UI elements
     const container = document.getElementById('canvas-container');
@@ -455,6 +455,8 @@
     let currentModel = null;
     let bodyMesh = null;
     let alumMesh = null;
+    let rawBodyGeometry = null;
+    let smoothBodyGeometry = null;
     let rawAlumGeometry = null;
     let smoothAlumGeometry = null;
     let loadedTextures = {};
@@ -480,7 +482,7 @@
 
       // 2. Camera: clean orthographic-like perspective matching product studio shots
       camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 1000);
-      setCameraAngle('0');
+      camera.position.set(0, 1.05, 3.8);
 
       // 3. Renderer with high color fidelity
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
@@ -492,13 +494,18 @@
       renderer.toneMappingExposure = 1.15;
       container.appendChild(renderer.domElement);
 
-      // 4. Orbit Controls
+      // 4. Orbit Controls (Permite rotar libremente e inspeccionar frente, tapa y base)
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
-      controls.minDistance = 1.5;
+      controls.minDistance = 0.8;
       controls.maxDistance = 8.0;
-      controls.maxPolarAngle = Math.PI / 2 + 0.15;
+      controls.minPolarAngle = 0.01;
+      controls.maxPolarAngle = Math.PI - 0.01;
+      controls.target.set(0, 1.0, 0);
+      controls.update();
+
+      setCameraAngle('0');
 
       // 5. Commercial Studio Product Lighting
       hemiLight = new THREE.HemisphereLight(0xffffff, 0xd0d5dd, 1.1);
@@ -612,8 +619,11 @@
       await Promise.all(loadPromises);
     }
 
-    function splitCanGeometry(sourceGeo) {
+    function splitCanGeometry(sourceGeo, meshMatrix) {
       const geo = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
+      if (meshMatrix) {
+        geo.applyMatrix4(meshMatrix);
+      }
       const pos = geo.attributes.position;
       const uv = geo.attributes.uv;
 
@@ -621,11 +631,11 @@
       const aPos = [], aUV = [];
 
       for (let i = 0; i < pos.count; i += 3) {
-        const z1 = pos.getZ(i), z2 = pos.getZ(i + 1), z3 = pos.getZ(i + 2);
-        const avgZ = (z1 + z2 + z3) / 3;
+        const y1 = pos.getY(i), y2 = pos.getY(i + 1), y3 = pos.getY(i + 2);
+        const avgY = (y1 + y2 + y3) / 3;
 
         // Triangles of body and neck (printed with Kalpa label): between 7.95 and 162.05
-        const isBody = (avgZ > 7.95 && avgZ < 162.05);
+        const isBody = (avgY > 7.95 && avgY < 162.05);
         const targetP = isBody ? bPos : aPos;
         const targetU = isBody ? bUV : aUV;
 
@@ -657,6 +667,8 @@
         currentModel = null;
         bodyMesh = null;
         alumMesh = null;
+        rawBodyGeometry = null;
+        smoothBodyGeometry = null;
         rawAlumGeometry = null;
         smoothAlumGeometry = null;
       }
@@ -665,26 +677,6 @@
       fbxLoader.load(
         path,
         (fbx) => {
-          currentModel = fbx;
-
-          // Standardize can scale
-          const box = new THREE.Box3().setFromObject(fbx);
-          const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const targetHeight = 2.0;
-          const scaleFactor = (maxDim > 0) ? (targetHeight / maxDim) : 1;
-          fbx.scale.setScalar(scaleFactor);
-
-          const updatedBox = new THREE.Box3().setFromObject(fbx);
-          const center = updatedBox.getCenter(new THREE.Vector3());
-          fbx.position.x = -center.x;
-          fbx.position.y = -updatedBox.min.y;
-          fbx.position.z = -center.z;
-
-          // Rotation 0 aligns KALPA front logo directly to the camera
-          fbx.rotation.y = 0;
-          targetCanRotationY = 0;
-
           let originalChildMesh = null;
           fbx.traverse((child) => {
             if (child.isMesh && !originalChildMesh) {
@@ -693,29 +685,42 @@
           });
 
           if (originalChildMesh) {
-            const { bodyGeo, alumGeo } = splitCanGeometry(originalChildMesh.geometry);
+            originalChildMesh.updateMatrix();
+            const { bodyGeo, alumGeo } = splitCanGeometry(originalChildMesh.geometry, originalChildMesh.matrix);
+            
+            rawBodyGeometry = bodyGeo.clone();
+            smoothBodyGeometry = smoothCanBody(rawBodyGeometry);
+
             rawAlumGeometry = alumGeo.clone();
-            smoothAlumGeometry = makeCanRimCircular(rawAlumGeometry, 2);
+            smoothAlumGeometry = buildRealisticCanRimAndBase(rawAlumGeometry);
 
-            const parent = originalChildMesh.parent || fbx;
-            parent.remove(originalChildMesh);
-
-            bodyMesh = new THREE.Mesh(bodyGeo);
+            bodyMesh = new THREE.Mesh(isRimCircular ? smoothBodyGeometry : rawBodyGeometry);
             bodyMesh.name = "Can_BodyPrint";
             bodyMesh.castShadow = true;
             bodyMesh.receiveShadow = false;
-            parent.add(bodyMesh);
 
             alumMesh = new THREE.Mesh(isRimCircular ? smoothAlumGeometry : rawAlumGeometry);
             alumMesh.name = "Can_AluminumParts";
             alumMesh.castShadow = true;
             alumMesh.receiveShadow = false;
-            parent.add(alumMesh);
+
+            const canGroup = new THREE.Group();
+            canGroup.name = "Can_Model_Root";
+            canGroup.add(bodyMesh);
+            canGroup.add(alumMesh);
+
+            // Altura total de la lata ~165.35 units -> escalar a 2.0 unidades estándar
+            const scaleFactor = 2.0 / 165.35;
+            canGroup.scale.setScalar(scaleFactor);
+            canGroup.position.set(0, 0, 0); // Base apoyada en el suelo Y=0, centrada en X=0, Z=0
+            canGroup.rotation.y = 0;
+            targetCanRotationY = 0;
+
+            currentModel = canGroup;
+            scene.add(canGroup);
 
             applyMaterials();
           }
-
-          scene.add(fbx);
 
           setTimeout(() => {
             loaderOverlay.classList.add('hidden');
@@ -802,13 +807,13 @@
       } else if (angle === 'top') {
         // Top view looking directly down onto the aluminum lid & tab
         targetCanRotationY = 0;
-        camera.position.set(0, 3.6, 0.01);
-        controls.target.set(0, 1.9, 0);
+        camera.position.set(0, 3.3, 0.001);
+        controls.target.set(0, 1.95, 0);
       } else if (angle === 'bottom') {
         // Bottom view looking onto concave aluminum base
         targetCanRotationY = 0;
-        camera.position.set(0, -1.6, 0.01);
-        controls.target.set(0, 0.1, 0);
+        camera.position.set(0, -1.2, 0.001);
+        controls.target.set(0, 0.05, 0);
       }
 
       if (currentModel) {
@@ -827,15 +832,16 @@
         });
       });
 
-      // Rim smoothing toggle
+      // Rim and body smoothing toggle
       btnToggleRim.addEventListener('click', () => {
         isRimCircular = !isRimCircular;
         btnToggleRim.classList.toggle('active', isRimCircular);
         btnToggleRim.textContent = isRimCircular ? '✨ Borde Redondeado Suave' : '⚠️ Borde Original Facetado';
-        if (alumMesh) {
+        if (bodyMesh && smoothBodyGeometry && rawBodyGeometry) {
+          bodyMesh.geometry = isRimCircular ? smoothBodyGeometry : rawBodyGeometry;
+        }
+        if (alumMesh && smoothAlumGeometry && rawAlumGeometry) {
           alumMesh.geometry = isRimCircular ? smoothAlumGeometry : rawAlumGeometry;
-          alumMesh.geometry.attributes.position.needsUpdate = true;
-          if (alumMesh.geometry.attributes.normal) alumMesh.geometry.attributes.normal.needsUpdate = true;
         }
       });
 
