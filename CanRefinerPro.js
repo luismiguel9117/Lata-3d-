@@ -83,7 +83,7 @@ export function smoothCanBody(sourceGeo) {
 /**
  * Reconstruye y suaviza todas las secciones de aluminio:
  * 1. Base interior (disco Y=0): conserva 100% INTACTO el mapeo UV del círculo de aluminio cepillado concéntrico sin cortes ni pliegues.
- * 2. Bisel inferior: genera un anillo biselado suave de 72 segmentos que conecta la base con el cuerpo a la perfección.
+ * 2. Bisel inferior: genera un anillo biselado suave de 72 segmentos alineado con la costura trasera de la lata (-PI a +PI).
  * 3. Tapa interior: conserva 100% INTACTA la tapa plana con su abre-fácil original.
  * 4. Borde superior (chime): genera el reborde redondeado, grueso y continuo de 72 segmentos con normales exteriores correctas.
  */
@@ -131,6 +131,7 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
 
   // 2. Generar el bisel inferior en 72 segmentos radiales suaves y continuos
   // Conecta exactamente el disco base (R = 27.031, Y = 0.0) con el cuerpo (R = 33.000, Y = 7.851)
+  // Ángulo de -PI a +PI para que la costura quede en la parte trasera de la lata (Z = -33) y el frente sea 100% puro y continuo
   const bevelPos = [];
   const bevelUV = [];
   const segments = 72;
@@ -141,21 +142,22 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
   const vUpper = 0.244;
 
   for (let s = 0; s < segments; s++) {
-    const a1 = (s / segments) * Math.PI * 2;
-    const a2 = ((s + 1) / segments) * Math.PI * 2;
+    const a1 = -Math.PI + (s / segments) * Math.PI * 2;
+    const a2 = -Math.PI + ((s + 1) / segments) * Math.PI * 2;
 
     const sin1 = Math.sin(a1), cos1 = Math.cos(a1);
     const sin2 = Math.sin(a2), cos2 = Math.cos(a2);
 
-    const u1 = 0.004 + 0.490 * (s / segments);
-    const u2 = 0.004 + 0.490 * ((s + 1) / segments);
+    // Mapeo seguro U: 0.004 a 0.462 (zona 100% pura de aluminio libre de artefactos)
+    const u1 = 0.004 + 0.458 * (s / segments);
+    const u2 = 0.004 + 0.458 * ((s + 1) / segments);
 
     const xL1 = rLower * sin1, zL1 = rLower * cos1, yL1 = yLower;
     const xL2 = rLower * sin2, zL2 = rLower * cos2, yL2 = yLower;
     const xU1 = rUpper * sin1, zU1 = rUpper * cos1, yU1 = yUpper;
     const xU2 = rUpper * sin2, zU2 = rUpper * cos2, yU2 = yUpper;
 
-    // Triángulo 1 (normal hacia afuera y hacia abajo)
+    // Triángulo 1 (normal exterior hacia afuera y hacia abajo)
     bevelPos.push(xL1, yL1, zL1, xL2, yL2, zL2, xU1, yU1, zU1);
     bevelUV.push(u1, vLower, u2, vLower, u1, vUpper);
 
@@ -180,8 +182,8 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
   ];
 
   for (let s = 0; s < segments; s++) {
-    const a1 = (s / segments) * Math.PI * 2;
-    const a2 = ((s + 1) / segments) * Math.PI * 2;
+    const a1 = -Math.PI + (s / segments) * Math.PI * 2;
+    const a2 = -Math.PI + ((s + 1) / segments) * Math.PI * 2;
     const sin1 = Math.sin(a1), cos1 = Math.cos(a1);
     const sin2 = Math.sin(a2), cos2 = Math.cos(a2);
     const u1 = 0.50 + 0.40 * (s / segments);
