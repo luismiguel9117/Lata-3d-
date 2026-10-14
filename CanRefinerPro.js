@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
- * Subdivide una geometría cilíndrica proyectando los midpoints horizontales al radio circular real (en plano X-Z).
- * Preserva UVs continuos sin distorsiones en la costura.
+ * Subdivide una geometría cilíndrica proyectando los midpoints de aristas perimetrales al radio circular real (en plano X-Z).
+ * Protege estrictamente cuerdas internas y diagonales de discos para evitar pliegues, solapamientos y z-fighting.
  */
 function subdivideCylindricalGeometry(sourceGeo, passes = 2) {
   let g = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
@@ -40,11 +40,15 @@ function subdivideCylindricalGeometry(sourceGeo, passes = 2) {
       const u23 = interpUV(u2, u3);
       const u31 = interpUV(u3, u1);
 
+      // Proyectar ÚNICAMENTE aristas perimetrales adyacentes (d < 0.45 * radio).
+      // Las cuerdas internas y diagonales NUNCA se proyectan hacia el borde para evitar triángulos plegados que parpadeen.
       const project = (va, vb, vm) => {
+        const d = va.distanceTo(vb);
         const ra = Math.hypot(va.x, va.z);
         const rb = Math.hypot(vb.x, vb.z);
-        if (Math.abs(ra - rb) < 1.5 && Math.abs(va.y - vb.y) < 1.5 && ra > 10.0) {
-          const targetR = (ra + rb) * 0.5;
+        const avgR = (ra + rb) * 0.5;
+        if (d < 0.45 * avgR && Math.abs(ra - rb) < 1.5 && Math.abs(va.y - vb.y) < 1.5 && ra > 10.0) {
+          const targetR = avgR;
           const angle = Math.atan2(vm.x, vm.z);
           vm.x = targetR * Math.sin(angle);
           vm.z = targetR * Math.cos(angle);
@@ -86,7 +90,7 @@ export function smoothCanBody(sourceGeo) {
 
 /**
  * Reconstruye y suaviza todas las secciones de aluminio:
- * 1. Base inferior: subdivide la base original con proyección circular idéntica al cuerpo (empalme perfecto sin huecos ni transparencias).
+ * 1. Base inferior: subdivide la base original con proyección circular perimetral segura, sin triángulos degenerados ni parpadeos.
  * 2. Tapa interior: conserva 100% intacta la tapa plana con su abre-fácil original.
  * 3. Borde superior (chime): genera el reborde redondeado, grueso y continuo de 72 segmentos con normales exteriores correctas.
  */
@@ -127,7 +131,7 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
     }
   }
 
-  // 2. Subdividir la base original a 72 segmentos radiales suaves
+  // 2. Subdividir la base original a 72 segmentos radiales suaves de forma segura
   const rawBaseGeo = new THREE.BufferGeometry();
   rawBaseGeo.setAttribute('position', new THREE.Float32BufferAttribute(basePos, 3));
   if (uv) rawBaseGeo.setAttribute('uv', new THREE.Float32BufferAttribute(baseUV, 2));

@@ -464,6 +464,7 @@
     let autoRotate = false;
     let wireframeMode = false;
     let targetCanRotationY = 0;
+    let shadowPlane = null;
 
     // Lights
     let softboxLeft, softboxRight, rimLight, topRimLight, hemiLight;
@@ -480,8 +481,8 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xffffff);
 
-      // 2. Camera: clean orthographic-like perspective matching product studio shots
-      camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 1000);
+      // 2. Camera: clean perspective with optimal depth precision (far: 50.0)
+      camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 50.0);
       camera.position.set(0, 1.05, 3.8);
 
       // 3. Renderer with high color fidelity
@@ -576,17 +577,20 @@
       ctx.fillRect(0, 0, 512, 512);
 
       const shadowTex = new THREE.CanvasTexture(canvas);
-      const shadowPlane = new THREE.Mesh(
+      shadowPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(2.6, 2.6),
         new THREE.MeshBasicMaterial({
           map: shadowTex,
           transparent: true,
           opacity: 0.65,
-          depthWrite: false
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: 1,
+          polygonOffsetUnits: 1
         })
       );
       shadowPlane.rotation.x = -Math.PI / 2;
-      shadowPlane.position.y = -0.002;
+      shadowPlane.position.y = -0.003;
       scene.add(shadowPlane);
     }
 
@@ -929,6 +933,10 @@
 
       if (autoRotate && currentModel) {
         currentModel.rotation.y += 0.007;
+      }
+
+      if (shadowPlane) {
+        shadowPlane.visible = (camera.position.y > 0.05);
       }
 
       controls.update();
