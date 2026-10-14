@@ -1,22 +1,41 @@
-# Visor 3D - Lata de Cerveza con Three.js
+# Visor 3D • KALPA Café Cold Brew (Modelo Final)
 
-Visualizador interactivo 3D en tiempo real para modelos de lata de cerveza (FBX) desarrollado con **Three.js** y **WebGL**.
+Visualizador interactivo 3D en tiempo real para la lata comercial **KALPA Café Cold Brew (355 mL)** desarrollado con **Three.js** y **WebGL**.
 
-## 🚀 Características
+---
 
-- **Carga de Modelos FBX:** Soporta los modelos originales `SM_BeerCan_A.fbx`, `SM_BeerCan_B.fbx`, `SM_BeerCan_C.fbx`, `SM_BeerCan_D.fbx` y `SM_Beer.fbx`.
-- **Corrección de Borde Circular:** Algoritmo que refina la geometría original para suavizar y redondear el borde superior (de 18 lados a 72 segmentos radiales suaves).
-- **Materiales PBR:** Texturas de color base, mapa de normales y mapa RMAO (Roughness / Metallic / AO).
-- **Iluminación de Estudio:** Iluminación de 3 puntos + luz focal cenital para resaltar reflejos metálicos en el borde.
-- **Controles Interactivos:**
-  - Alternar corrección de borde circular en tiempo real.
-  - Vistas rápidas de cámara (Zoom al Borde / Vista Completa).
-  - Ajuste de metalicidad, rugosidad e intensidad lumínica.
-  - Modos de visualización: Auto-giro, Malla (wireframe) y captura de pantalla en PNG.
+## ⚡ Características Principales
 
-## 💻 Cómo Ejecutar Localmente
+- **Modelo 3D Exclusivo:** Basado en `Models/SM_BeerCan_A.fbx` con orientación estándar vertical (Y-Up), escala normalizada y centrado en el suelo del estudio.
+- **Refinador Geométrico (`CanRefinerPro.js`):**
+  - **Cuerpo Cilíndrico y Cuello:** Subdivisión y proyección radial continua de 18 a 72 segmentos, eliminando facetas cuadradas sin distorsión de textura.
+  - **Reborde Superior (Chime Roll):** Aro de aluminio extruido y curvado hacia afuera idéntico a las latas reales de referencia, con normales exteriores perfectas.
+  - **Tapa de Aluminio:** Conserva la tapa interior con su abre-fácil original y mapa UV concéntrico.
+  - **Base de Aluminio:** Anillo biselado suave de 72 sectores con costura oculta en la parte posterior, y disco plano con textura concéntrica de aluminio cepillado 100% continua (sin solapamientos, ranuras ni z-fighting).
+- **Diseño Oficial KALPA:**
+  - Logotipo frontal de KALPA Café Cold Brew, sellos de calidad y tabla nutricional completa.
+  - Patrón andino oscuro continuo en cuello y cuerpo.
+- **Estudio Fotográfico Comercial:**
+  - Fondo blanco puro de estudio comercial (`#ffffff`).
+  - Iluminación de estudio con softboxes laterales, luz cenital para la tapa y luz trasera de recorte.
+  - Sombra de contacto circular suave en el suelo.
+- **Ángulos de Cámara Preset:**
+  - `0° Frente`: Logotipo frontal a la altura de los ojos.
+  - `45° Ángulo`: Perspectiva en tres cuartos.
+  - `90° Lateral`: Vista lateral del patrón andino.
+  - `180° Nutri`: Tabla nutricional y código de barras.
+  - `🔝 Tapa`: Vista cenital directa hacia la tapa y el abre-fácil.
+  - `⬇️ Base`: Vista inferior directa hacia el domo de aluminio.
+- **Herramientas de Estudio:**
+  - Tinte interactivo del cuerpo (sin alterar el aluminio de la tapa ni de la base).
+  - Control de lustre satinado (roughness) e intensidad de luces.
+  - Giro automático, modo malla (wireframe) y captura de pantalla en alta resolución (HD).
 
-### Opción 1: Con el acceso directo (Windows)
+---
+
+## 🚀 Cómo Ejecutar Localmente
+
+### Opción 1: Acceso Directo (Windows)
 Haz doble clic en:
 ```bash
 iniciar_servidor.bat
@@ -26,12 +45,15 @@ iniciar_servidor.bat
 ```bash
 python -m http.server 8080
 ```
-Y abre en tu navegador: [http://localhost:8080](http://localhost:8080)
+Abre en tu navegador: [http://localhost:8080](http://localhost:8080)
 
 ### Opción 3: Con Node.js
 ```bash
 npx serve -p 8080 .
 ```
 
+---
+
 ## 📄 Créditos y Licencia
-- Modelo base de lata bajo licencia **Creative Commons Attribution 4.0 (CC BY 4.0)** por Likhandristov Sergei (ver `licenseCC.txt`).
+- Modelo base 3D bajo licencia **Creative Commons Attribution 4.0 (CC BY 4.0)** por Likhandristov Sergei (ver `licenseCC.txt`).
+- Diseño gráfico de etiqueta: **KALPA Café Cold Brew**.
