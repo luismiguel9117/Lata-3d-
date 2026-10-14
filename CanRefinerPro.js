@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
- * Subdivide una geometría cilíndrica proyectando los midpoints de aristas perimetrales al radio circular real (en plano X-Z).
- * Protege estrictamente cuerdas internas y diagonales de discos para evitar pliegues, solapamientos y z-fighting.
+ * Subdivide una geometría cilíndrica (el cuerpo impreso de la lata) proyectando los midpoints
+ * de aristas perimetrales al radio circular real (en plano X-Z).
+ * Preserva UVs continuos sin distorsiones en la costura.
  */
-function subdivideCylindricalGeometry(sourceGeo, passes = 2) {
+export function smoothCanBody(sourceGeo) {
   let g = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
 
-  for (let pass = 0; pass < passes; pass++) {
+  for (let pass = 0; pass < 2; pass++) {
     const p = g.attributes.position;
     const u = g.attributes.uv;
     const newPos = [];
@@ -40,8 +41,7 @@ function subdivideCylindricalGeometry(sourceGeo, passes = 2) {
       const u23 = interpUV(u2, u3);
       const u31 = interpUV(u3, u1);
 
-      // Proyectar ÚNICAMENTE aristas perimetrales adyacentes (d < 0.45 * radio).
-      // Las cuerdas internas y diagonales NUNCA se proyectan hacia el borde para evitar triángulos plegados que parpadeen.
+      // Proyectar aristas cilíndricas perimetrales
       const project = (va, vb, vm) => {
         const d = va.distanceTo(vb);
         const ra = Math.hypot(va.x, va.z);
@@ -81,36 +81,34 @@ function subdivideCylindricalGeometry(sourceGeo, passes = 2) {
 }
 
 /**
- * Suaviza y circulariza el cuerpo y cuello cilíndrico de la lata de 18 a 72 segmentos radiales en plano X-Z (Y-up),
- * eliminando por completo cualquier aspecto facetado o "cuadrado".
- */
-export function smoothCanBody(sourceGeo) {
-  return subdivideCylindricalGeometry(sourceGeo, 2);
-}
-
-/**
  * Reconstruye y suaviza todas las secciones de aluminio:
- * 1. Base inferior: subdivide la base original con proyección circular perimetral segura, sin triángulos degenerados ni parpadeos.
- * 2. Tapa interior: conserva 100% intacta la tapa plana con su abre-fácil original.
- * 3. Borde superior (chime): genera el reborde redondeado, grueso y continuo de 72 segmentos con normales exteriores correctas.
+ * 1. Base interior (disco Y=0): conserva 100% INTACTO el mapeo UV del círculo de aluminio cepillado concéntrico sin cortes ni pliegues.
+ * 2. Bisel inferior: genera un anillo biselado suave de 72 segmentos que conecta la base con el cuerpo a la perfección.
+ * 3. Tapa interior: conserva 100% INTACTA la tapa plana con su abre-fácil original.
+ * 4. Borde superior (chime): genera el reborde redondeado, grueso y continuo de 72 segmentos con normales exteriores correctas.
  */
 export function buildRealisticCanRimAndBase(sourceAlumGeo) {
   const geo = sourceAlumGeo.index ? sourceAlumGeo.toNonIndexed() : sourceAlumGeo.clone();
   const pos = geo.attributes.position;
   const uv = geo.attributes.uv;
 
-  // 1. Separar triángulos de la base (Y <= 7.95) y de la tapa plana interior (Y ~ 162.54, R <= 25.5)
-  const basePos = [], baseUV = [];
-  const lidPos = [], lidUV = [];
+  // 1. Conservar el disco plano original de la base (Triángulos con Y <= 0.01)
+  // Contiene el mapa UV concéntrico original del aluminio cepillado sin cortes en U=0.50
+  const diskPos = [];
+  const diskUV = [];
+
+  // Tapa superior plana interior con relieve y pestaña original
+  const lidPos = [];
+  const lidUV = [];
 
   for (let i = 0; i < pos.count; i += 3) {
     const avgY = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3;
 
-    if (avgY <= 7.95) {
-      // Triángulo de la base inferior original
+    if (avgY <= 0.01) {
+      // Disco plano de la base original (R <= 27.03, Y = 0)
       for (let c = 0; c < 3; c++) {
-        basePos.push(pos.getX(i + c), pos.getY(i + c), pos.getZ(i + c));
-        if (uv) baseUV.push(uv.getX(i + c), uv.getY(i + c));
+        diskPos.push(pos.getX(i + c), pos.getY(i + c), pos.getZ(i + c));
+        if (uv) diskUV.push(uv.getX(i + c), uv.getY(i + c));
       }
     } else if (avgY >= 162.05) {
       const maxY = Math.max(pos.getY(i), pos.getY(i + 1), pos.getY(i + 2));
@@ -121,7 +119,7 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
         Math.hypot(pos.getX(i + 2), pos.getZ(i + 2))
       );
 
-      // Tapa plana interior con relieve y pestaña original
+      // Tapa plana interior (Y ~ 162.54, R <= 25.5)
       if (maxY <= 162.7 && minY >= 162.3 && maxR <= 25.5) {
         for (let c = 0; c < 3; c++) {
           lidPos.push(pos.getX(i + c), pos.getY(i + c), pos.getZ(i + c));
@@ -131,29 +129,53 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
     }
   }
 
-  // 2. Subdividir la base original a 72 segmentos radiales suaves de forma segura
-  const rawBaseGeo = new THREE.BufferGeometry();
-  rawBaseGeo.setAttribute('position', new THREE.Float32BufferAttribute(basePos, 3));
-  if (uv) rawBaseGeo.setAttribute('uv', new THREE.Float32BufferAttribute(baseUV, 2));
-  const smoothBase = subdivideCylindricalGeometry(rawBaseGeo, 2);
+  // 2. Generar el bisel inferior en 72 segmentos radiales suaves y continuos
+  // Conecta exactamente el disco base (R = 27.031, Y = 0.0) con el cuerpo (R = 33.000, Y = 7.851)
+  const bevelPos = [];
+  const bevelUV = [];
+  const segments = 72;
+
+  const rLower = 27.031, yLower = 0.0;
+  const rUpper = 33.000, yUpper = 7.851;
+  const vLower = 0.220;
+  const vUpper = 0.244;
+
+  for (let s = 0; s < segments; s++) {
+    const a1 = (s / segments) * Math.PI * 2;
+    const a2 = ((s + 1) / segments) * Math.PI * 2;
+
+    const sin1 = Math.sin(a1), cos1 = Math.cos(a1);
+    const sin2 = Math.sin(a2), cos2 = Math.cos(a2);
+
+    const u1 = 0.004 + 0.490 * (s / segments);
+    const u2 = 0.004 + 0.490 * ((s + 1) / segments);
+
+    const xL1 = rLower * sin1, zL1 = rLower * cos1, yL1 = yLower;
+    const xL2 = rLower * sin2, zL2 = rLower * cos2, yL2 = yLower;
+    const xU1 = rUpper * sin1, zU1 = rUpper * cos1, yU1 = yUpper;
+    const xU2 = rUpper * sin2, zU2 = rUpper * cos2, yU2 = yUpper;
+
+    // Triángulo 1 (normal hacia afuera y hacia abajo)
+    bevelPos.push(xL1, yL1, zL1, xL2, yL2, zL2, xU1, yU1, zU1);
+    bevelUV.push(u1, vLower, u2, vLower, u1, vUpper);
+
+    // Triángulo 2
+    bevelPos.push(xL2, yL2, zL2, xU2, yU2, zU2, xU1, yU1, zU1);
+    bevelUV.push(u2, vLower, u2, vUpper, u1, vUpper);
+  }
 
   // 3. Generar el aro del reborde superior (chime roll) con 72 sectores y normales exteriores
-  const rimPos = [], rimUV = [];
-  const segments = 72;
+  const rimPos = [];
+  const rimUV = [];
   const rimProfile = [
-    // Encuentro con cuello cónico
     { r: 28.80, y: 162.10, v: 0.238 },
-    // Bisel exterior curvado hacia arriba
     { r: 29.35, y: 163.40, v: 0.239 },
     { r: 29.50, y: 164.50, v: 0.240 },
-    // Cúspide del reborde redondeado
     { r: 29.35, y: 165.25, v: 0.241 },
     { r: 28.95, y: 165.35, v: 0.242 },
     { r: 28.45, y: 165.00, v: 0.242 },
-    // Pared interior descendente hacia la tapa
     { r: 27.60, y: 163.80, v: 0.243 },
     { r: 26.80, y: 162.80, v: 0.243 },
-    // Empalme con la tapa plana
     { r: 25.40, y: 162.54, v: 0.244 }
   ];
 
@@ -182,26 +204,9 @@ export function buildRealisticCanRimAndBase(sourceAlumGeo) {
     }
   }
 
-  // 4. Combinar Base Suavizada + Tapa Original + Borde Superior Redondeado
-  const combPos = [];
-  const combUV = [];
-
-  // Base suavizada
-  const bNonIndexed = smoothBase.toNonIndexed();
-  const bp = bNonIndexed.attributes.position;
-  const bu = bNonIndexed.attributes.uv;
-  for (let i = 0; i < bp.count; i++) {
-    combPos.push(bp.getX(i), bp.getY(i), bp.getZ(i));
-    if (bu) combUV.push(bu.getX(i), bu.getY(i));
-  }
-
-  // Tapa interior
-  for (let i = 0; i < lidPos.length; i++) combPos.push(lidPos[i]);
-  for (let i = 0; i < lidUV.length; i++) combUV.push(lidUV[i]);
-
-  // Borde superior
-  for (let i = 0; i < rimPos.length; i++) combPos.push(rimPos[i]);
-  for (let i = 0; i < rimUV.length; i++) combUV.push(rimUV[i]);
+  // 4. Combinar Disco Base Original + Bisel 72 Segmentos + Tapa Original + Borde Superior Redondeado
+  const combPos = [...diskPos, ...bevelPos, ...lidPos, ...rimPos];
+  const combUV = [...diskUV, ...bevelUV, ...lidUV, ...rimUV];
 
   const totalAlumGeo = new THREE.BufferGeometry();
   totalAlumGeo.setAttribute('position', new THREE.Float32BufferAttribute(combPos, 3));
