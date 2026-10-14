@@ -205,6 +205,37 @@
       border-color: #f8fafc;
     }
 
+    .btn-subdiv {
+      background: rgba(125, 140, 160, 0.1);
+      border: 1px solid rgba(125, 140, 160, 0.2);
+      border-radius: 8px;
+      padding: 7px 4px;
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .btn-subdiv:hover {
+      background: rgba(15, 23, 42, 0.08);
+      border-color: rgba(15, 23, 42, 0.3);
+    }
+
+    .btn-subdiv.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode .btn-subdiv.active {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #f8fafc;
+    }
+
     /* Range sliders */
     input[type="range"] {
       width: 100%;
@@ -385,12 +416,17 @@
       </div>
     </div>
 
-    <!-- Rim circular smoothing toggle -->
+    <!-- Subdivision Surface Control (Toda la Lata) -->
     <div class="control-group">
-      <div class="section-title">⭕ Borde Superior</div>
-      <button class="btn active" id="btn-toggle-rim" style="width: 100%;">
-        ✨ Borde Redondeado Suave
-      </button>
+      <div class="section-title">🔮 Subdivision Surface (Toda la Lata)</div>
+      <div class="angles-grid">
+        <button class="btn-subdiv" data-level="0">Nivel 0 (Base)</button>
+        <button class="btn-subdiv" data-level="1">Nivel 1</button>
+        <button class="btn-subdiv active" data-level="2">Nivel 2 (HD)</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="subdiv-info">
+        Malla: 3,968 triángulos (Cuerpo, Tapa y Base subdivididos)
+      </p>
     </div>
 
     <!-- Lighting & Studio Environment -->
@@ -442,25 +478,23 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-    import { smoothCanBody, buildRealisticCanRimAndBase } from './CanRefinerPro.js';
+    import { LoopSubdivision } from './LoopSubdivision.js';
 
     // UI elements
     const container = document.getElementById('canvas-container');
     const loaderOverlay = document.getElementById('loader-overlay');
     const modelStats = document.getElementById('model-stats');
-    const btnToggleRim = document.getElementById('btn-toggle-rim');
     const angleButtons = document.querySelectorAll('.btn-angle');
+    const subdivButtons = document.querySelectorAll('.btn-subdiv');
+    const subdivInfo = document.getElementById('subdiv-info');
 
     let scene, camera, renderer, controls;
     let currentModel = null;
     let bodyMesh = null;
     let alumMesh = null;
-    let rawBodyGeometry = null;
-    let smoothBodyGeometry = null;
-    let rawAlumGeometry = null;
-    let smoothAlumGeometry = null;
+    let subdivLevels = {};
+    let currentSubdivLevel = 2; // Default to HD level 2 (3,968 triangles)
     let loadedTextures = {};
-    let isRimCircular = true;
     let autoRotate = false;
     let wireframeMode = false;
     let targetCanRotationY = 0;
@@ -619,11 +653,8 @@
       await Promise.all(loadPromises);
     }
 
-    function splitCanGeometry(sourceGeo, meshMatrix) {
+    function splitCanGeometry(sourceGeo) {
       const geo = sourceGeo.index ? sourceGeo.toNonIndexed() : sourceGeo.clone();
-      if (meshMatrix) {
-        geo.applyMatrix4(meshMatrix);
-      }
       const pos = geo.attributes.position;
       const uv = geo.attributes.uv;
 
@@ -667,10 +698,7 @@
         currentModel = null;
         bodyMesh = null;
         alumMesh = null;
-        rawBodyGeometry = null;
-        smoothBodyGeometry = null;
-        rawAlumGeometry = null;
-        smoothAlumGeometry = null;
+        subdivLevels = {};
       }
 
       const fbxLoader = new FBXLoader();
@@ -686,20 +714,24 @@
 
           if (originalChildMesh) {
             originalChildMesh.updateMatrix();
-            const { bodyGeo, alumGeo } = splitCanGeometry(originalChildMesh.geometry, originalChildMesh.matrix);
-            
-            rawBodyGeometry = bodyGeo.clone();
-            smoothBodyGeometry = smoothCanBody(rawBodyGeometry);
+            const sourceGeo = originalChildMesh.geometry.clone();
+            sourceGeo.applyMatrix4(originalChildMesh.matrix);
 
-            rawAlumGeometry = alumGeo.clone();
-            smoothAlumGeometry = buildRealisticCanRimAndBase(rawAlumGeometry);
+            // Precalcular niveles de Subdivision Surface para toda la lata (Cuerpo, Tapa y Base)
+            subdivLevels = {
+              0: splitCanGeometry(sourceGeo),
+              1: splitCanGeometry(LoopSubdivision.modify(sourceGeo, 1, { split: false, uvSmooth: false, preserveEdges: false })),
+              2: splitCanGeometry(LoopSubdivision.modify(sourceGeo, 2, { split: false, uvSmooth: false, preserveEdges: false }))
+            };
 
-            bodyMesh = new THREE.Mesh(isRimCircular ? smoothBodyGeometry : rawBodyGeometry);
+            const initialGeo = subdivLevels[currentSubdivLevel];
+
+            bodyMesh = new THREE.Mesh(initialGeo.bodyGeo);
             bodyMesh.name = "Can_BodyPrint";
             bodyMesh.castShadow = true;
             bodyMesh.receiveShadow = false;
 
-            alumMesh = new THREE.Mesh(isRimCircular ? smoothAlumGeometry : rawAlumGeometry);
+            alumMesh = new THREE.Mesh(initialGeo.alumGeo);
             alumMesh.name = "Can_AluminumParts";
             alumMesh.castShadow = true;
             alumMesh.receiveShadow = false;
@@ -720,6 +752,7 @@
             scene.add(canGroup);
 
             applyMaterials();
+            updateSubdivInfo();
           }
 
           setTimeout(() => {
@@ -729,6 +762,23 @@
         undefined,
         (err) => console.error(err)
       );
+    }
+
+    function updateSubdivInfo() {
+      if (!subdivInfo) return;
+      const count = (currentSubdivLevel === 0) ? '248' : (currentSubdivLevel === 1) ? '992' : '3,968';
+      subdivInfo.textContent = `Malla: ${count} triángulos (Cuerpo, Tapa y Base subdivididos)`;
+    }
+
+    function setSubdivisionLevel(level) {
+      currentSubdivLevel = level;
+      if (!subdivLevels[level]) return;
+
+      const geo = subdivLevels[level];
+      if (bodyMesh) bodyMesh.geometry = geo.bodyGeo;
+      if (alumMesh) alumMesh.geometry = geo.alumGeo;
+
+      updateSubdivInfo();
     }
 
     function applyMaterials() {
@@ -832,17 +882,14 @@
         });
       });
 
-      // Rim and body smoothing toggle
-      btnToggleRim.addEventListener('click', () => {
-        isRimCircular = !isRimCircular;
-        btnToggleRim.classList.toggle('active', isRimCircular);
-        btnToggleRim.textContent = isRimCircular ? '✨ Borde Redondeado Suave' : '⚠️ Borde Original Facetado';
-        if (bodyMesh && smoothBodyGeometry && rawBodyGeometry) {
-          bodyMesh.geometry = isRimCircular ? smoothBodyGeometry : rawBodyGeometry;
-        }
-        if (alumMesh && smoothAlumGeometry && rawAlumGeometry) {
-          alumMesh.geometry = isRimCircular ? smoothAlumGeometry : rawAlumGeometry;
-        }
+      // Subdivision Surface level buttons
+      subdivButtons.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          subdivButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const lvl = parseInt(btn.getAttribute('data-level'), 10);
+          setSubdivisionLevel(lvl);
+        });
       });
 
       // Background color selector

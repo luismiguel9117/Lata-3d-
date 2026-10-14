@@ -9,10 +9,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "fflate": "^0.8.3",
     "pngjs": "^7.0.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "three-subdivide": "^1.1.5"
   }
 }
