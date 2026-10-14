@@ -442,6 +442,7 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
     import { smoothCanBody, buildRealisticCanRimAndBase } from './CanRefinerPro.js';
 
     // UI elements
@@ -495,6 +496,11 @@
       renderer.toneMappingExposure = 1.15;
       container.appendChild(renderer.domElement);
 
+      // Entorno HDR de estudio para reflejos metálicos brillantes en el aluminio
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileEquirectangularShader();
+      scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
       // 4. Orbit Controls (Permite rotar libremente e inspeccionar frente, tapa y base)
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -532,17 +538,17 @@
       rimLight.position.set(0, 3.5, -4.0);
       scene.add(rimLight);
 
-      // Top Down Light (Tapa de aluminio)
-      topRimLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      // Top Down Light (Tapa de aluminio brillante)
+      topRimLight = new THREE.DirectionalLight(0xffffff, 2.2);
       topRimLight.position.set(0.2, 5.0, 0.8);
       scene.add(topRimLight);
 
-      // Base Bounce Light: Ilumina el bisel inferior de aluminio desde el suelo blanco (elimina sombras negras)
-      const baseBounceLight = new THREE.DirectionalLight(0xffffff, 1.4);
+      // Base Bounce Light: Ilumina el bisel y base inferior de aluminio con brillo metálico plateado
+      const baseBounceLight = new THREE.DirectionalLight(0xffffff, 2.0);
       baseBounceLight.position.set(0, -1.5, 2.2);
       scene.add(baseBounceLight);
 
-      const baseBackBounce = new THREE.DirectionalLight(0xffffff, 1.1);
+      const baseBackBounce = new THREE.DirectionalLight(0xffffff, 1.8);
       baseBackBounce.position.set(0, -1.5, -2.2);
       scene.add(baseBackBounce);
 
@@ -758,12 +764,13 @@
         });
       }
 
-      // 2. Pure Aluminum Sections (Top Lid & Base Chime - Never Tinted)
+      // 2. Pure Aluminum Sections (Top Lid, Chime & Base - Bright Sparkling Silver Aluminum)
       if (alumMesh) {
         alumMesh.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(0xffffff),
-          metalness: 0.96,
-          roughness: 0.20,
+          metalness: 0.90,
+          roughness: 0.16,
+          envMapIntensity: 2.2,
           map: loadedTextures.readyBase || null,
           normalMap: normalTex || null,
           side: THREE.DoubleSide,
