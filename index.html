@@ -640,8 +640,8 @@
         readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
         readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
         readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
-        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=3',
-        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=3'
+        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=4',
+        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=4'
       };
 
       const loadPromises = Object.entries(files).map(([key, url]) => {
@@ -794,7 +794,7 @@
           clearcoat: dropletsEnabled ? 1.0 : matParams.clearcoat,
           clearcoatRoughness: dropletsEnabled ? 0.05 : 0.25,
           clearcoatNormalMap: dropletsEnabled ? loadedTextures.dropletsNormal : null,
-          clearcoatNormalScale: new THREE.Vector2(dropletsIntensity * 1.5, dropletsIntensity * 1.5),
+          clearcoatNormalScale: new THREE.Vector2(dropletsIntensity * 1.8, dropletsIntensity * 1.8),
           sheen: frostEnabled ? (frostIntensity * 0.45) : 0,
           sheenColor: new THREE.Color(0xdbeafe),
           sheenRoughness: 0.35,
@@ -835,7 +835,7 @@
         bodyMesh.material.clearcoatRoughness = dropletsEnabled ? 0.05 : 0.25;
         bodyMesh.material.clearcoatNormalMap = dropletsEnabled ? loadedTextures.dropletsNormal : null;
         if (bodyMesh.material.clearcoatNormalScale) {
-          bodyMesh.material.clearcoatNormalScale.set(dropletsIntensity * 1.5, dropletsIntensity * 1.5);
+          bodyMesh.material.clearcoatNormalScale.set(dropletsIntensity * 1.8, dropletsIntensity * 1.8);
         }
         bodyMesh.material.sheen = frostEnabled ? (frostIntensity * 0.45) : 0;
         bodyMesh.material.wireframe = wireframeMode;
