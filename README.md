@@ -27,7 +27,7 @@ Visualizador interactivo 3D en tiempo real para la lata comercial **KALPA Café 
   - `🔝 Tapa`: Vista cenital directa hacia la tapa y el abre-fácil.
   - `⬇️ Base`: Vista inferior directa hacia el domo de aluminio.
 - **Herramientas de Estudio:**
-  - **🧊 Modo Congelada (Gotas y Escarcha 3D):** Capa física de micro-gotas, gotas medianas y escurrimientos con normales 3D (`MeshPhysicalMaterial.clearcoatNormalMap`), reflejos cristalinos y halo de escarcha (*sheen* sub-cero), conmutable ON/OFF y regulador continuo de intensidad en tiempo real.
+  - **💧 Gotas de Condensación 3D:** Capa física de barniz líquido con gotas de agua discretas y realistas con relieve 3D (`MeshPhysicalMaterial.clearcoatNormalMap`), reflejos cristalinos ultra nítidos y luces de recorte ámbar y blanco sobre el negro satinado profundo de la lata, con botón conmutable ON/OFF y regulador continuo de intensidad en tiempo real.
   - Tinte interactivo del cuerpo (sin alterar el aluminio de la tapa ni de la base).
   - Control de lustre satinado (roughness) e intensidad de luces.
   - Giro automático, modo malla (wireframe) y captura de pantalla en alta resolución (HD).
