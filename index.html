@@ -393,6 +393,16 @@
       </button>
     </div>
 
+    <!-- Frost & Water Droplets (Efecto Lata Congelada) -->
+    <div class="control-group">
+      <div class="section-title">❄️ Condensación y Escarcha</div>
+      <button class="btn active" id="btn-toggle-frost" style="width: 100%;">
+        🧊 Lata Congelada (Gotas 3D): ON
+      </button>
+      <label>Intensidad de Frío / Gotas: <span id="val-frost">1.2</span></label>
+      <input type="range" id="param-frost" min="0.2" max="2.5" step="0.1" value="1.2">
+    </div>
+
     <!-- Lighting & Studio Environment -->
     <div class="control-group">
       <div class="section-title">💡 Iluminación de Estudio</div>
@@ -466,6 +476,8 @@
     let wireframeMode = false;
     let targetCanRotationY = 0;
     let shadowPlane = null;
+    let frostEnabled = true;
+    let frostIntensity = 1.2;
 
     // Lights
     let softboxLeft, softboxRight, rimLight, topRimLight, hemiLight;
@@ -606,7 +618,9 @@
         kalpaBase: 'Materials/Ready/T_BeerCan_Kalpa.png',
         readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
         readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
-        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png'
+        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
+        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png',
+        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png'
       };
 
       const loadPromises = Object.entries(files).map(([key, url]) => {
@@ -617,6 +631,9 @@
               if (key.includes('Base')) tex.colorSpace = THREE.SRGBColorSpace;
               tex.wrapS = THREE.RepeatWrapping;
               tex.wrapT = THREE.RepeatWrapping;
+              if (key === 'dropletsNormal' || key === 'frostRoughness') {
+                tex.repeat.set(2.0, 3.0);
+              }
               loadedTextures[key] = tex;
               resolve();
             },
@@ -746,14 +763,18 @@
       const normalTex = loadedTextures.readyNormal;
       const rmaoTex = loadedTextures.readyRMAO;
 
-      // 1. Printed Can Body (Premium Semi-Matte Silk Finish)
+      // 1. Printed Can Body (Premium Semi-Matte Silk Finish with Cold Condensation Droplets)
       if (bodyMesh) {
         bodyMesh.material = new THREE.MeshPhysicalMaterial({
           color: new THREE.Color(matParams.color),
           metalness: matParams.metalness,
           roughness: matParams.roughness,
-          clearcoat: matParams.clearcoat,
-          clearcoatRoughness: 0.25,
+          clearcoat: frostEnabled ? 1.0 : matParams.clearcoat,
+          clearcoatRoughness: frostEnabled ? 0.08 : 0.25,
+          clearcoatNormalMap: frostEnabled ? loadedTextures.dropletsNormal : null,
+          clearcoatNormalScale: new THREE.Vector2(frostIntensity * 1.5, frostIntensity * 1.5),
+          sheen: frostEnabled ? (frostIntensity * 0.40) : 0,
+          sheenColor: new THREE.Color(0xdbeafe),
           map: baseTex || null,
           normalMap: normalTex || null,
           normalScale: new THREE.Vector2(0.8, 0.8),
@@ -764,7 +785,7 @@
         });
       }
 
-      // 2. Pure Aluminum Sections (Top Lid, Chime & Base - Bright Sparkling Silver Aluminum)
+      // 2. Pure Aluminum Sections (Top Lid, Chime & Base - Bright Sparkling Silver Aluminum with Droplets)
       if (alumMesh) {
         alumMesh.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(0xffffff),
@@ -772,7 +793,8 @@
           roughness: 0.16,
           envMapIntensity: 2.2,
           map: loadedTextures.readyBase || null,
-          normalMap: normalTex || null,
+          normalMap: (frostEnabled && loadedTextures.dropletsNormal) ? loadedTextures.dropletsNormal : (normalTex || null),
+          normalScale: (frostEnabled && loadedTextures.dropletsNormal) ? new THREE.Vector2(frostIntensity * 0.9, frostIntensity * 0.9) : new THREE.Vector2(1.0, 1.0),
           side: THREE.DoubleSide,
           transparent: false,
           depthWrite: true,
@@ -785,11 +807,23 @@
       if (bodyMesh && bodyMesh.material) {
         bodyMesh.material.color.set(matParams.color);
         bodyMesh.material.roughness = matParams.roughness;
+        bodyMesh.material.clearcoat = frostEnabled ? 1.0 : matParams.clearcoat;
+        bodyMesh.material.clearcoatRoughness = frostEnabled ? 0.08 : 0.25;
+        bodyMesh.material.clearcoatNormalMap = frostEnabled ? loadedTextures.dropletsNormal : null;
+        if (bodyMesh.material.clearcoatNormalScale) {
+          bodyMesh.material.clearcoatNormalScale.set(frostIntensity * 1.5, frostIntensity * 1.5);
+        }
+        bodyMesh.material.sheen = frostEnabled ? (frostIntensity * 0.40) : 0;
         bodyMesh.material.wireframe = wireframeMode;
         bodyMesh.material.needsUpdate = true;
       }
       if (alumMesh && alumMesh.material) {
         alumMesh.material.color.set(0xffffff);
+        alumMesh.material.normalMap = (frostEnabled && loadedTextures.dropletsNormal) ? loadedTextures.dropletsNormal : (loadedTextures.readyNormal || null);
+        if (alumMesh.material.normalScale) {
+          const s = frostEnabled ? (frostIntensity * 0.9) : 1.0;
+          alumMesh.material.normalScale.set(s, s);
+        }
         alumMesh.material.wireframe = wireframeMode;
         alumMesh.material.needsUpdate = true;
       }
@@ -860,6 +894,24 @@
         if (alumMesh && smoothAlumGeometry && rawAlumGeometry) {
           alumMesh.geometry = isRimCircular ? smoothAlumGeometry : rawAlumGeometry;
         }
+      });
+
+      // Frost and water droplets toggle & slider
+      const btnToggleFrost = document.getElementById('btn-toggle-frost');
+      const frostInput = document.getElementById('param-frost');
+      const frostVal = document.getElementById('val-frost');
+
+      btnToggleFrost.addEventListener('click', () => {
+        frostEnabled = !frostEnabled;
+        btnToggleFrost.classList.toggle('active', frostEnabled);
+        btnToggleFrost.textContent = frostEnabled ? '🧊 Lata Congelada (Gotas 3D): ON' : '☀️ Lata Seca / Limpia: OFF';
+        updateMaterialParams();
+      });
+
+      frostInput.addEventListener('input', (e) => {
+        frostIntensity = parseFloat(e.target.value);
+        frostVal.textContent = frostIntensity.toFixed(1);
+        updateMaterialParams();
       });
 
       // Background color selector
