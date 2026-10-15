@@ -393,14 +393,24 @@
       </button>
     </div>
 
-    <!-- Water Droplets (Efecto Gotas de Condensación 3D) -->
+    <!-- 1. Water Droplets (Gotas de Condensación 3D) -->
     <div class="control-group">
       <div class="section-title">💧 Gotas de Condensación 3D</div>
-      <button class="btn active" id="btn-toggle-frost" style="width: 100%;">
+      <button class="btn active" id="btn-toggle-droplets" style="width: 100%;">
         💧 Gotas de Agua 3D: ON
       </button>
-      <label>Relieve de Gotas: <span id="val-frost">1.2</span></label>
-      <input type="range" id="param-frost" min="0.2" max="2.5" step="0.1" value="1.2">
+      <label>Relieve de Gotas: <span id="val-droplets">1.3</span></label>
+      <input type="range" id="param-droplets" min="0.2" max="2.5" step="0.1" value="1.3">
+    </div>
+
+    <!-- 2. Frost & Freeze Effect (Efecto Congelado / Escarcha) -->
+    <div class="control-group">
+      <div class="section-title">❄️ Escarcha / Efecto Congelado</div>
+      <button class="btn active" id="btn-toggle-frost" style="width: 100%;">
+        ❄️ Escarcha Congelada: ON
+      </button>
+      <label>Intensidad de Escarcha: <span id="val-frost">1.0</span></label>
+      <input type="range" id="param-frost" min="0.1" max="2.0" step="0.1" value="1.0">
     </div>
 
     <!-- Lighting & Studio Environment -->
@@ -476,8 +486,10 @@
     let wireframeMode = false;
     let targetCanRotationY = 0;
     let shadowPlane = null;
+    let dropletsEnabled = true;
+    let dropletsIntensity = 1.3;
     let frostEnabled = true;
-    let frostIntensity = 1.2;
+    let frostIntensity = 1.0;
 
     // Lights
     let softboxLeft, softboxRight, rimLight, topRimLight, hemiLight;
@@ -628,8 +640,8 @@
         readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
         readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
         readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
-        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=2',
-        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=2'
+        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=3',
+        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=3'
       };
 
       const loadPromises = Object.entries(files).map(([key, url]) => {
@@ -772,16 +784,20 @@
       const normalTex = loadedTextures.readyNormal;
       const rmaoTex = loadedTextures.readyRMAO;
 
-      // 1. Printed Can Body (Deep Satin Espresso Black with Real 3D Water Droplets)
+      // 1. Printed Can Body (Deep Satin Espresso Black with Independent 3D Droplets and Frost Sheen)
       if (bodyMesh) {
         bodyMesh.material = new THREE.MeshPhysicalMaterial({
           color: new THREE.Color(matParams.color),
           metalness: matParams.metalness,
-          roughness: matParams.roughness,
-          clearcoat: frostEnabled ? 1.0 : matParams.clearcoat,
-          clearcoatRoughness: frostEnabled ? 0.05 : 0.25,
-          clearcoatNormalMap: frostEnabled ? loadedTextures.dropletsNormal : null,
-          clearcoatNormalScale: new THREE.Vector2(frostIntensity * 1.6, frostIntensity * 1.6),
+          roughness: frostEnabled ? Math.min(0.65, matParams.roughness + frostIntensity * 0.12) : matParams.roughness,
+          roughnessMap: (frostEnabled && loadedTextures.frostRoughness) ? loadedTextures.frostRoughness : null,
+          clearcoat: dropletsEnabled ? 1.0 : matParams.clearcoat,
+          clearcoatRoughness: dropletsEnabled ? 0.05 : 0.25,
+          clearcoatNormalMap: dropletsEnabled ? loadedTextures.dropletsNormal : null,
+          clearcoatNormalScale: new THREE.Vector2(dropletsIntensity * 1.5, dropletsIntensity * 1.5),
+          sheen: frostEnabled ? (frostIntensity * 0.45) : 0,
+          sheenColor: new THREE.Color(0xdbeafe),
+          sheenRoughness: 0.35,
           map: baseTex || null,
           normalMap: normalTex || null,
           normalScale: new THREE.Vector2(0.8, 0.8),
@@ -792,12 +808,12 @@
         });
       }
 
-      // 2. Pure Aluminum Sections (Top Lid, Chime & Base - Bright Sparkling Silver Aluminum)
+      // 2. Pure Aluminum Sections (Top Lid, Chime & Base - Bright Sparkling Silver Aluminum with Frost Option)
       if (alumMesh) {
         alumMesh.material = new THREE.MeshStandardMaterial({
           color: new THREE.Color(0xffffff),
           metalness: 0.90,
-          roughness: 0.16,
+          roughness: frostEnabled ? (0.16 + frostIntensity * 0.10) : 0.16,
           envMapIntensity: 2.2,
           map: loadedTextures.readyBase || null,
           normalMap: normalTex || null,
@@ -813,18 +829,21 @@
     function updateMaterialParams() {
       if (bodyMesh && bodyMesh.material) {
         bodyMesh.material.color.set(matParams.color);
-        bodyMesh.material.roughness = matParams.roughness;
-        bodyMesh.material.clearcoat = frostEnabled ? 1.0 : matParams.clearcoat;
-        bodyMesh.material.clearcoatRoughness = frostEnabled ? 0.05 : 0.25;
-        bodyMesh.material.clearcoatNormalMap = frostEnabled ? loadedTextures.dropletsNormal : null;
+        bodyMesh.material.roughness = frostEnabled ? Math.min(0.65, matParams.roughness + frostIntensity * 0.12) : matParams.roughness;
+        bodyMesh.material.roughnessMap = (frostEnabled && loadedTextures.frostRoughness) ? loadedTextures.frostRoughness : null;
+        bodyMesh.material.clearcoat = dropletsEnabled ? 1.0 : matParams.clearcoat;
+        bodyMesh.material.clearcoatRoughness = dropletsEnabled ? 0.05 : 0.25;
+        bodyMesh.material.clearcoatNormalMap = dropletsEnabled ? loadedTextures.dropletsNormal : null;
         if (bodyMesh.material.clearcoatNormalScale) {
-          bodyMesh.material.clearcoatNormalScale.set(frostIntensity * 1.6, frostIntensity * 1.6);
+          bodyMesh.material.clearcoatNormalScale.set(dropletsIntensity * 1.5, dropletsIntensity * 1.5);
         }
+        bodyMesh.material.sheen = frostEnabled ? (frostIntensity * 0.45) : 0;
         bodyMesh.material.wireframe = wireframeMode;
         bodyMesh.material.needsUpdate = true;
       }
       if (alumMesh && alumMesh.material) {
         alumMesh.material.color.set(0xffffff);
+        alumMesh.material.roughness = frostEnabled ? (0.16 + frostIntensity * 0.10) : 0.16;
         alumMesh.material.normalMap = loadedTextures.readyNormal || null;
         if (alumMesh.material.normalScale) {
           alumMesh.material.normalScale.set(1.0, 1.0);
@@ -901,7 +920,25 @@
         }
       });
 
-      // Frost and water droplets toggle & slider
+      // 1. Water Droplets toggle & slider
+      const btnToggleDroplets = document.getElementById('btn-toggle-droplets');
+      const dropletsInput = document.getElementById('param-droplets');
+      const dropletsVal = document.getElementById('val-droplets');
+
+      btnToggleDroplets.addEventListener('click', () => {
+        dropletsEnabled = !dropletsEnabled;
+        btnToggleDroplets.classList.toggle('active', dropletsEnabled);
+        btnToggleDroplets.textContent = dropletsEnabled ? '💧 Gotas de Agua 3D: ON' : '💧 Gotas de Agua 3D: OFF';
+        updateMaterialParams();
+      });
+
+      dropletsInput.addEventListener('input', (e) => {
+        dropletsIntensity = parseFloat(e.target.value);
+        dropletsVal.textContent = dropletsIntensity.toFixed(1);
+        updateMaterialParams();
+      });
+
+      // 2. Frost and Freeze toggle & slider
       const btnToggleFrost = document.getElementById('btn-toggle-frost');
       const frostInput = document.getElementById('param-frost');
       const frostVal = document.getElementById('val-frost');
@@ -909,7 +946,7 @@
       btnToggleFrost.addEventListener('click', () => {
         frostEnabled = !frostEnabled;
         btnToggleFrost.classList.toggle('active', frostEnabled);
-        btnToggleFrost.textContent = frostEnabled ? '💧 Gotas de Agua 3D: ON' : '☀️ Lata Seca: OFF';
+        btnToggleFrost.textContent = frostEnabled ? '❄️ Escarcha Congelada: ON' : '❄️ Escarcha Congelada: OFF';
         updateMaterialParams();
       });
 
