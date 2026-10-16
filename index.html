@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Visor 3D • KALPA Café Cold Brew (Estudio Publicitario)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -463,7 +466,7 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
     import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-    import { smoothCanBody, buildRealisticCanRimAndBase } from './CanRefinerPro.js';
+    import { smoothCanBody, buildRealisticCanRimAndBase } from './CanRefinerPro.js?v=8';
 
     // UI elements
     const container = document.getElementById('canvas-container');
@@ -636,12 +639,12 @@
     async function preloadTextures() {
       const texLoader = new THREE.TextureLoader();
       const files = {
-        kalpaBase: 'Materials/Ready/T_BeerCan_Kalpa.png',
-        readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png',
-        readyNormal: 'Materials/Ready/T_BeerCan_Normal.png',
-        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png',
-        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=7',
-        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=7'
+        kalpaBase: 'Materials/Ready/T_BeerCan_Kalpa.png?v=8',
+        readyBase: 'Materials/Ready/T_BeerCan_BaseColor.png?v=8',
+        readyNormal: 'Materials/Ready/T_BeerCan_Normal.png?v=8',
+        readyRMAO: 'Materials/Ready/T_BeerCan_RMAO.png?v=8',
+        dropletsNormal: 'Materials/Ready/T_WaterDroplets_Normal.png?v=8',
+        frostRoughness: 'Materials/Ready/T_Frost_Roughness.png?v=8'
       };
 
       const loadPromises = Object.entries(files).map(([key, url]) => {
